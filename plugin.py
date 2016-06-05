@@ -123,7 +123,7 @@ class SelectorsDialog(Tk):
             self.text.config(state=DISABLED)
         else:
             self.labelInfo = ttk.Label(self.mainframe,
-                                       text="Non ho trovato nessun selettore inutilizzato")
+                                       text="I didn't find any unused selector.")
             self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
 
         ttk.Button(self.mainframe, text='Continue',
