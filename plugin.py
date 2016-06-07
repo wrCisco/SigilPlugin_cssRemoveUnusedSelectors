@@ -28,8 +28,12 @@ from tkinter import ttk
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 from collections import OrderedDict
+from cssutils.stylesheets.mediaquery import MediaQuery
 import cssutils
 import sys
+
+# Add support for Amazon's proprietary media types
+MediaQuery.MEDIA_TYPES.extend(('amzn-mobi', 'amzn-kf8'))
 
 # As from https://pythonhosted.org/cssselect/#supported-selectors
 NEVER_MATCH = (":hover",
