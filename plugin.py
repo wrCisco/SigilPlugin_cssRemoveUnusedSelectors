@@ -79,7 +79,7 @@ class InfoDialog(Tk):
         if css_to_jump:
             for file, err in css_to_jump.items():
                 filename = href_to_basename(bk.id_to_href(file))
-                par_msg += "I couldn't parse {} due to\n{}\n".format(file, err)
+                par_msg += "I couldn't parse {} due to\n{}\n".format(filename, err)
         if css_warnings:
             for file, warn in css_warnings.items():
                 filename = href_to_basename(bk.id_to_href(file))
