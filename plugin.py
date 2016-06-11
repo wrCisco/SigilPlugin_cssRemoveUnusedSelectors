@@ -66,13 +66,16 @@ class InfoDialog(Tk):
 
         self.msg = StringVar()
         self.labelInfo = ttk.Label(self.mainframe,
-                                   textvariable=self.msg)
-        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky=(W,E), pady=5)
+                                   textvariable=self.msg, wraplength=600)
+        self.labelInfo.grid(row=0, column=0, columnspan=3, sticky=(W,E), pady=5)
 
         ttk.Button(self.mainframe, text='Continue',
-                   command=self.proceed).grid(row=1, column=2, sticky=(W,E))
+                   command=self.proceed).grid(row=1, column=1, sticky=(W,E))
         ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=1, column=3, sticky=(W,E))
+                   command=self.quit).grid(row=1, column=2, sticky=(W,E))
+        self.mainframe.columnconfigure(0, weight=1)
+        self.mainframe.columnconfigure(1, weight=0)
+        self.mainframe.columnconfigure(2, weight=0)
 
     def parseErrors(self, bk, css_to_jump=None, css_to_parse=None, css_warnings=None):
         par_msg = ''
