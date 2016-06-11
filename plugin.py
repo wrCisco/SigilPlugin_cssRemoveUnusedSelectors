@@ -295,6 +295,7 @@ def run(bk):
         return -1
 
     # Delete selectors chosen by the user.
+    css_to_change = {}
     old_rule, counter = None, 0
     for x in orphaned_dict.values():
         if x[1].get() == 1:
@@ -304,7 +305,9 @@ def run(bk):
                 counter = 0
             del x[0][1].selectorList[x[0][3]-counter]
             old_rule = x[0][1]
-            bk.writefile(x[0][0], x[0][4].cssText)
+            css_to_change[x[0][0]] = x[0][4].cssText
+    for css_id, css_text in css_to_change.items():
+        bk.writefile(css_id, css_text)
     return 0
 
 
