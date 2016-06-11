@@ -83,7 +83,7 @@ class InfoDialog(Tk):
         if css_warnings:
             for file, warn in css_warnings.items():
                 filename = href_to_basename(bk.id_to_href(file))
-                par_msg +=  ("Warning: Found unknown @rule in {} at line {}: {}. "
+                par_msg += ("Warning: Found unknown @rule in {} at line {}: {}. "
                             "Text of unknown rules might be not preserved.".format(
                                                     filename, warn[1], warn[0]))
         if css_to_parse:
@@ -149,7 +149,7 @@ class SelectorsDialog(Tk):
         self.destroy()
 
 
-def styleRules(css):
+def styleRules(rules_collector):
     """
     Yields style rules in a css, both at top level and nested inside
     @media rules (unlimited nesting levels: sooner or later cssutils
@@ -252,9 +252,9 @@ def run(bk):
     parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
     css_to_jump, css_to_parse, css_warnings = preParseCss(bk, parser)
 
-    if css_to_jump:
+    if css_to_jump or css_warnings:
         form = InfoDialog()
-        form.parseErrors(css_to_jump, css_to_parse, css_warnings)
+        form.parseErrors(bk, css_to_jump, css_to_parse, css_warnings)
         form.mainloop()
         if parameters['stop']:
             return -1
