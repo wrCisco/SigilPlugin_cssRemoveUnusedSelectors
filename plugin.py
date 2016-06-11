@@ -32,6 +32,7 @@ from cssutils.stylesheets.mediaquery import MediaQuery
 import cssutils
 import sys
 
+
 # Add support for Amazon's proprietary media types
 MediaQuery.MEDIA_TYPES.extend(('amzn-mobi', 'amzn-kf8'))
 
@@ -44,6 +45,7 @@ NEVER_MATCH = (":hover",
 
 parameters = {}
 orphaned_dict = OrderedDict()
+
 
 class InfoDialog(Tk):
     """
@@ -142,16 +144,16 @@ class SelectorsDialog(Tk):
 
 def styleRules(css):
     """
-    Yields all style rules in a css, both at top level and nested inside
-    an @media rule (other nesting schemes are not supported).
+    Yields style rules in a css, both at top level and nested inside
+    @media rules (unlimited nesting levels: sooner or later cssutils
+    will support it).
     """
-    for rule in css.cssRules:
+    for rule in rules_collector:
         if rule.typeString == "STYLE_RULE":
             yield rule
-        if rule.typeString == "MEDIA_RULE":
-            for m_rule in rule.cssRules:
-                if m_rule.typeString == "STYLE_RULE":
-                    yield m_rule
+        elif rule.typeString == "MEDIA_RULE":
+            for nested_rule in styleRules(rule):
+                yield nested_rule
 
 
 def cssNamespaces(css):
