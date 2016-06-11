@@ -67,18 +67,25 @@ class InfoDialog(Tk):
         self.msg = StringVar()
         self.labelInfo = ttk.Label(self.mainframe,
                                    textvariable=self.msg)
-        self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
+        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky=(W,E), pady=5)
 
         ttk.Button(self.mainframe, text='Continue',
-                   command=self.proceed).grid(row=1, column=1, sticky=E)
+                   command=self.proceed).grid(row=1, column=2, sticky=(W,E))
         ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=1, column=2, sticky=E)
+                   command=self.quit).grid(row=1, column=3, sticky=(W,E))
 
-    def parseErrors(self, css_to_jump=None, css_to_parse=None):
+    def parseErrors(self, bk, css_to_jump=None, css_to_parse=None, css_warnings=None):
         par_msg = ''
         if css_to_jump:
             for file, err in css_to_jump.items():
+                filename = href_to_basename(bk.id_to_href(file))
                 par_msg += "I couldn't parse {} due to\n{}\n".format(file, err)
+        if css_warnings:
+            for file, warn in css_warnings.items():
+                filename = href_to_basename(bk.id_to_href(file))
+                par_msg +=  ("Warning: Found unknown @rule in {} at line {}: {}. "
+                            "Text of unknown rules might be not preserved.".format(
+                                                    filename, warn[1], warn[0]))
         if css_to_parse:
             files_to_parse = ", ".join(css_to_parse)
             par_msg += "\nParse will be done on {}".format(files_to_parse)
@@ -96,7 +103,7 @@ class SelectorsDialog(Tk):
     to delete.
     """
     global parameters, orphaned_dict
-    parameters['stop'] = True
+    parameters['stop_'] = True
 
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
@@ -138,7 +145,7 @@ class SelectorsDialog(Tk):
                    command=self.quit).grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
 
     def proceed(self):
-        parameters['stop'] = False
+        parameters['stop_'] = False
         self.destroy()
 
 
@@ -198,20 +205,26 @@ def ignoreSelectors(selector_text):
 
 def preParseCss(bk, parser):
     """
-    For safety reason, every exception raised during the css parsing
+    For safety reason, every exception raised during css parsing
     will cause the css to be left untouched.
     """
     css_to_jump = {}
+    css_warnings = {}
     css_to_parse = []
     for css_id, css_href in bk.css_iter():
         css_string = bk.readfile(css_id).decode()
         try:
-            parser.parseString(css_string)
+            parsed = parser.parseString(css_string)
         except Exception as E: # cssutils.xml.dom.HierarchyRequestErr as E:
             css_to_jump[css_id] = E
         else:
+            # 0 means UNKNOWN_RULE, as from cssutils.css.cssrule.CSSRule
+            for unknown_rule in parsed.cssRules.rulesOfType(0):
+                line = css_string[:css_string.find(unknown_rule.atkeyword)].count('\n')+1
+                css_warnings[css_id] = (unknown_rule.atkeyword, line)
+                break
             css_to_parse.append(css_id)
-    return css_to_jump, css_to_parse
+    return css_to_jump, css_to_parse, css_warnings
 
 
 def setCssOutputPrefs():
@@ -236,12 +249,12 @@ def href_to_basename(href, ow=None):
 
 def run(bk):
     setCssOutputPrefs()
-    parser = cssutils.CSSParser(raiseExceptions=True)
-    css_to_jump, css_to_parse = preParseCss(bk, parser)
+    parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
+    css_to_jump, css_to_parse, css_warnings = preParseCss(bk, parser)
 
     if css_to_jump:
         form = InfoDialog()
-        form.parseErrors(css_to_jump, css_to_parse)
+        form.parseErrors(css_to_jump, css_to_parse, css_warnings)
         form.mainloop()
         if parameters['stop']:
             return -1
@@ -278,7 +291,7 @@ def run(bk):
     # Show the list of selectors to the user.
     form = SelectorsDialog(bk, orphaned_selectors)
     form.mainloop()
-    if parameters['stop']:
+    if parameters['stop_']:
         return -1
 
     # Delete selectors chosen by the user.
