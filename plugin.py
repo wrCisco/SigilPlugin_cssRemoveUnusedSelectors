@@ -50,7 +50,7 @@ class PrefsDialog(object):
         if prefs:
             self.prefs = prefs
         else:
-            self.prefs = {}
+            self.prefs = get_css_output_prefs(bk)
         top = self.top = Toplevel(parent)
         top.title("Preferences")
         top.resizable(width=TRUE, height=TRUE)
