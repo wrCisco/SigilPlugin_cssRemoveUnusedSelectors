@@ -28,13 +28,10 @@ from tkinter import ttk
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 from collections import OrderedDict
-from cssutils.stylesheets.mediaquery import MediaQuery
 import cssutils
 import sys
+import customCssutils
 
-
-# Add support for Amazon's proprietary media types
-MediaQuery.MEDIA_TYPES.extend(('amzn-mobi', 'amzn-kf8'))
 
 # As from https://pythonhosted.org/cssselect/#supported-selectors
 NEVER_MATCH = (":hover",
@@ -43,8 +40,167 @@ NEVER_MATCH = (":hover",
                ":target",
                ":visited")
 
-parameters = {}
-orphaned_dict = OrderedDict()
+
+class PrefsDialog(object):
+    """
+    Dialog to set and save preferences about css formatting.
+    """
+
+    def __init__(self, parent=None, bk=None, prefs=None):
+        if prefs:
+            self.prefs = prefs
+        else:
+            self.prefs = {}
+        top = self.top = Toplevel(parent)
+        top.title("Preferences")
+        top.resizable(width=TRUE, height=TRUE)
+        top.geometry('+100+100')
+        top.columnconfigure(0, weight=1)
+        top.rowconfigure(0, weight=1)
+        top.mainframe = ttk.Frame(top, padding="12 12 12 12") # padding values's order: "W N E S"
+        top.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+
+        self.indent = StringVar()
+        top.labelIndent = ttk.Label(top.mainframe, text="Indent:")
+        top.labelIndent.grid(row=0, column=0, sticky=(W,E))
+        top.comboIndent = ttk.Combobox(top.mainframe, textvariable=self.indent,
+                                       values=('No indentation', '1 space', '2 spaces',
+                                               '3 spaces', '4 spaces', '1 tab'))
+        top.comboIndent.grid(row=0, column=1, sticky=(W,E))
+        top.comboIndent.state(['readonly'])
+
+        self.indentLastBrace = BooleanVar()
+        top.checkIndentLastBrace = ttk.Checkbutton(top.mainframe, text="Indent rules's last brace",
+                                                   variable=self.indentLastBrace,
+                                                   onvalue=True, offvalue=False)
+        top.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=W)
+
+        self.keepEmptyRules = BooleanVar()
+        top.checkKeepEmptyRules = ttk.Checkbutton(top.mainframe, text="Keep empty rules (e.g. "+\
+                                                  "\"p { }\")", variable=self.keepEmptyRules,
+                                                  onvalue=True, offvalue=False)
+        top.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=W)
+
+        self.omitSemicolon = BooleanVar()
+        top.checkOmitSemicolon = ttk.Checkbutton(top.mainframe, text="Omit semicolon after rules's "+\
+                                                 "last declaration (e.g. \"p { font-size: 1.2em; "+\
+                                                 "text-indent: .5em }\")", variable=self.omitSemicolon,
+                                                 onvalue=True, offvalue=False)
+        top.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=W)
+
+        self.omitLeadingZero = BooleanVar()
+        top.checkOmitZeroes = ttk.Checkbutton(top.mainframe, text="Omit leading zero (e.g. \".5em\" vs \"0.5em\")",
+                                              variable=self.omitLeadingZero, onvalue=True,
+                                              offvalue=False)
+        top.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=W)
+
+        self.formatUnknownRules = BooleanVar()
+        top.checkFormatUnknown = ttk.Checkbutton(top.mainframe, text="Use settings to reformat css "+\
+                                                 "inside not recognized @rules, too (not completely safe)",
+                                                 variable=self.formatUnknownRules, onvalue=True,
+                                                 offvalue=False)
+        top.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=W)
+
+        self.blankLinesAfterRules = BooleanVar()
+        top.checkBlankLinesAfterRules = ttk.Checkbutton(top.mainframe, text="Add a blank line after every rule",
+                                                        variable=self.blankLinesAfterRules, onvalue=True,
+                                                        offvalue=False)
+        top.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=W)
+
+        # TODO: make a new custom serializer to leave the text untouched as much as possible
+        # self.leaveCodeAlone = BooleanVar()
+        #
+        # def toggle_freeze():
+        #     if self.leaveCodeAlone.get() == 1:
+        #         top.comboIndent.state(['disabled', 'readonly'])
+        #         top.checkIndentLastBrace.config(state=DISABLED)
+        #         top.checkKeepEmptyRules.config(state=DISABLED)
+        #         top.checkOmitSemicolon.config(state=DISABLED)
+        #         top.checkOmitZeroes.config(state=DISABLED)
+        #         top.checkFormatUnknown.config(state=DISABLED)
+        #     else:
+        #         top.comboIndent.state(['!disabled', 'readonly'])
+        #         top.checkIndentLastBrace.config(state=ACTIVE)
+        #         top.checkKeepEmptyRules.config(state=ACTIVE)
+        #         top.checkOmitSemicolon.config(state=ACTIVE)
+        #         top.checkOmitZeroes.config(state=ACTIVE)
+        #         top.checkFormatUnknown.config(state=ACTIVE)
+        #
+        # top.checkLeaveCode = ttk.Checkbutton(top.mainframe, text="Leave my coding style alone! Just delete "+\
+        #                                      "those useless selectors! (Experimental)",
+        #                                      variable=self.leaveCodeAlone, onvalue=True,
+        #                                      offvalue=False, command=toggle_freeze)
+        # top.checkLeaveCode.grid(row=7, column=0, columnspan=3, sticky=W)
+        # top.checkLeaveCode.state(['disabled'])
+
+        self.get_initial_values(top)
+
+        ttk.Button(top.mainframe, text='Save and continue',
+                   command=lambda: self.save_and_go(top, bk)).grid(row=7, column=3, sticky=E)
+        ttk.Button(top.mainframe, text='Cancel',
+                   command=top.destroy).grid(row=7, column=4, sticky=(W,E))
+
+        top.mainframe.columnconfigure(0, weight=0)
+        top.mainframe.columnconfigure(1, weight=0)
+        top.mainframe.columnconfigure(2, weight=1)
+        top.mainframe.columnconfigure(3, weight=0)
+        top.mainframe.columnconfigure(4, weight=0)
+
+    def get_initial_values(self, top):
+        if self.prefs['indent'] == "\t":
+            top.comboIndent.set('1 tab')
+        else:
+            top.comboIndent.current(newindex=len(self.prefs['indent']))
+        if self.prefs['indentClosingBrace']:
+            self.indentLastBrace.set(1)
+        else:
+            self.indentLastBrace.set(0)
+        if self.prefs['keepEmptyRules']:
+            self.keepEmptyRules.set(1)
+        else:
+            self.keepEmptyRules.set(0)
+        if self.prefs['omitLastSemicolon']:
+            self.omitSemicolon.set(1)
+        else:
+            self.omitSemicolon.set(0)
+        if self.prefs['omitLeadingZero']:
+            self.omitLeadingZero.set(1)
+        else:
+            self.omitLeadingZero.set(0)
+        if self.prefs['formatUnknownRules']:
+            self.formatUnknownRules.set(1)
+        else:
+            self.formatUnknownRules.set(0)
+        if self.prefs['blankLinesAfterRules']:
+            self.blankLinesAfterRules.set(1)
+        else:
+            self.blankLinesAfterRules.set(0)
+
+    def save_and_go(self, top, bk):
+        if self.indent.get() == '1 tab':
+            self.prefs['indent'] = '\t'
+        else:
+            self.prefs['indent'] = top.comboIndent.current() * ' '
+        self.prefs['indentClosingBrace'] = True \
+                if self.indentLastBrace.get() == 1 \
+                else False
+        self.prefs['keepEmptyRules'] = True \
+                if self.keepEmptyRules.get() == 1 \
+                else False
+        self.prefs['omitLastSemicolon'] = True \
+                if self.omitSemicolon.get() == 1 \
+                else False
+        self.prefs['omitLeadingZero'] = True \
+                if self.omitLeadingZero.get() == 1 \
+                else False
+        self.prefs['formatUnknownRules'] = True \
+                if self.formatUnknownRules.get() == 1 \
+                else False
+        self.prefs['blankLinesAfterRules'] = 1 * '\n' \
+                if self.blankLinesAfterRules.get() == 1 \
+                else 0 * '\n'
+        set_css_output_prefs(bk, self.prefs)
+        top.destroy()
 
 
 class InfoDialog(Tk):
@@ -53,49 +209,60 @@ class InfoDialog(Tk):
     wants to continue or stop the plugin.
     """
 
-    global parameters
-    parameters['stop'] = True
+    stop_plugin = True
 
-    def __init__(self):
+    def __init__(self, bk, prefs):
         super().__init__()
-        self.title('Some problem with css parsing...')
+        self.title('Preparing to parse...')
         self.resizable(width=TRUE, height=TRUE)
         self.geometry('+100+100')
-        self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.mainframe = ttk.Frame(self, padding="12 12 12 12")  # padding values's order: "W N E S"
         self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
 
         self.msg = StringVar()
         self.labelInfo = ttk.Label(self.mainframe,
                                    textvariable=self.msg, wraplength=600)
-        self.labelInfo.grid(row=0, column=0, columnspan=3, sticky=(W,E), pady=5)
-
+        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky=(W,E), pady=5)
+        
+        ttk.Button(self.mainframe, text='Set preferences',
+                   command=lambda: self.prefs_dlg(bk, prefs)).grid(row=1, column=0, sticky=(W,E))
         ttk.Button(self.mainframe, text='Continue',
-                   command=self.proceed).grid(row=1, column=1, sticky=(W,E))
+                   command=lambda: self.proceed(bk, prefs)).grid(row=1, column=2, sticky=(W,E))
         ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=1, column=2, sticky=(W,E))
-        self.mainframe.columnconfigure(0, weight=1)
-        self.mainframe.columnconfigure(1, weight=0)
+                   command=self.quit).grid(row=1, column=3, sticky=(W,E))
+        self.mainframe.columnconfigure(0, weight=0)
+        self.mainframe.columnconfigure(1, weight=1)
         self.mainframe.columnconfigure(2, weight=0)
+        self.mainframe.columnconfigure(3, weight=0)
 
     def parseErrors(self, bk, css_to_jump=None, css_to_parse=None, css_warnings=None):
         par_msg = ''
         if css_to_jump:
-            for file, err in css_to_jump.items():
-                filename = href_to_basename(bk.id_to_href(file))
+            for file_, err in css_to_jump.items():
+                filename = href_to_basename(bk.id_to_href(file_))
                 par_msg += "I couldn't parse {} due to\n{}\n".format(filename, err)
         if css_warnings:
-            for file, warn in css_warnings.items():
-                filename = href_to_basename(bk.id_to_href(file))
+            for file_, warn in css_warnings.items():
+                filename = href_to_basename(bk.id_to_href(file_))
                 par_msg += ("Warning: Found unknown @rule in {} at line {}: {}. "
-                            "Text of unknown rules might be not preserved.".format(
+                            "Text of unknown rules might not be preserved.".format(
                                                     filename, warn[1], warn[0]))
         if css_to_parse:
             files_to_parse = ", ".join(css_to_parse)
             par_msg += "\nParse will be done on {}".format(files_to_parse)
         self.msg.set(par_msg)
 
-    def proceed(self):
-        parameters['stop'] = False
+    def prefs_dlg(self, bk, prefs):
+        self.set_pref = PrefsDialog(self, bk, prefs)
+
+    def proceed(self, bk, prefs):
+        try:
+            self.set_pref
+        except AttributeError:
+            set_css_output_prefs(bk, prefs)
+        InfoDialog.stop_plugin = False
         self.destroy()
 
 
@@ -105,14 +272,17 @@ class SelectorsDialog(Tk):
     corresponding tags in xhtml files) and let the user choose the ones
     to delete.
     """
-    global parameters, orphaned_dict
-    parameters['stop_'] = True
+    
+    orphaned_dict = OrderedDict()
+    stop_plugin = True
 
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
         self.title('Remove unused Selectors')
         self.resizable(width=TRUE, height=TRUE)
         self.geometry('+100+100')
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
         self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
 
@@ -124,18 +294,20 @@ class SelectorsDialog(Tk):
             self.scrollList['command'] = self.text.yview
             self.text.grid(row=0, column=0, columnspan=3, sticky=(W,E))
 
-            for index, sel_tuple in enumerate(orphaned_selectors):
-                css_filename = href_to_basename(bk.id_to_href(sel_tuple[0]))
-                sel_and_css = sel_tuple[2].selectorText+" ({})".format(css_filename)
-                sel_key = sel_tuple[2].selectorText+"_"+str(index)
-                orphaned_dict[sel_key] = [sel_tuple, BooleanVar()]
-                orphaned_dict[sel_key].append(ttk.Checkbutton(self.mainframe,
-                                                              text=sel_and_css,
-                                                              variable=orphaned_dict[sel_key][1],
-                                                              onvalue=True, offvalue=False))
-                self.text.window_create("end", window=orphaned_dict[sel_key][2])
+            orphaned = SelectorsDialog.orphaned_dict
+
+            for index, selector_tuple in enumerate(orphaned_selectors):
+                css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
+                sel_and_css = selector_tuple[2].selectorText+" ({})".format(css_filename)
+                selector_key = selector_tuple[2].selectorText+"_"+str(index)
+                orphaned[selector_key] = [selector_tuple, BooleanVar()]
+                sel_checkbutton = ttk.Checkbutton(self.mainframe,
+                                                  text=sel_and_css,
+                                                  variable=orphaned[selector_key][1],
+                                                  onvalue=True, offvalue=False)
+                self.text.window_create("end", window=sel_checkbutton)
                 self.text.insert("end", "\n")
-                orphaned_dict[sel_key][1].set(True)
+                orphaned[selector_key][1].set(True)
             self.text.config(state=DISABLED)
         else:
             self.labelInfo = ttk.Label(self.mainframe,
@@ -148,7 +320,7 @@ class SelectorsDialog(Tk):
                    command=self.quit).grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
 
     def proceed(self):
-        parameters['stop_'] = False
+        SelectorsDialog.stop_plugin = False
         self.destroy()
 
 
@@ -230,15 +402,33 @@ def preParseCss(bk, parser):
     return css_to_jump, css_to_parse, css_warnings
 
 
-def setCssOutputPrefs():
+def set_css_output_prefs(bk, prefs):
     """
     As from https://pythonhosted.org/cssutils/docs/serialize.html
-    TODO: a GUI to let the user choose
     """
-    cssutils.ser.prefs.indent = 2 * ' '
-    cssutils.ser.prefs.indentClosingBrace = False
-    cssutils.ser.prefs.keepEmptyRules = True
-    cssutils.ser.prefs.omitLastSemicolon = False
+    cssutils.ser.prefs.indent = prefs['indent'] # 2 * ' '
+    cssutils.ser.prefs.indentClosingBrace = prefs['indentClosingBrace'] # False
+    cssutils.ser.prefs.keepEmptyRules = prefs['keepEmptyRules'] # True
+    cssutils.ser.prefs.omitLastSemicolon = prefs['omitLastSemicolon'] # False
+    cssutils.ser.prefs.omitLeadingZero = prefs['omitLeadingZero'] # False
+
+    # custom prefs, not in cssutils
+    cssutils.ser.prefs.blankLinesAfterRules = prefs['blankLinesAfterRules']
+    cssutils.ser.prefs.formatUnknownRules = prefs['formatUnknownRules']
+
+    bk.savePrefs(prefs)
+
+
+def get_css_output_prefs(bk):
+    prefs = bk.getPrefs()
+    prefs.defaults['indent'] = "\t" #2 * ' '
+    prefs.defaults['indentClosingBrace'] = False
+    prefs.defaults['keepEmptyRules'] = True
+    prefs.defaults['omitLastSemicolon'] = False
+    prefs.defaults['omitLeadingZero'] = False
+    prefs.defaults['blankLinesAfterRules'] = 1 * b'\n'
+    prefs.defaults['formatUnknownRules'] = False
+    return prefs
 
 
 def href_to_basename(href, ow=None):
@@ -251,16 +441,16 @@ def href_to_basename(href, ow=None):
 
 
 def run(bk):
-    setCssOutputPrefs()
+    cssutils.setSerializer(customCssutils.MyCSSSerializer())
+    prefs = get_css_output_prefs(bk)
     parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
     css_to_jump, css_to_parse, css_warnings = preParseCss(bk, parser)
 
-    if css_to_jump or css_warnings:
-        form = InfoDialog()
-        form.parseErrors(bk, css_to_jump, css_to_parse, css_warnings)
-        form.mainloop()
-        if parameters['stop']:
-            return -1
+    form = InfoDialog(bk, prefs)
+    form.parseErrors(bk, css_to_jump, css_to_parse, css_warnings)
+    form.mainloop()
+    if InfoDialog.stop_plugin:
+        return -1
 
     # Parse files to create the list of "orphaned selectors"
     orphaned_selectors = []
@@ -294,21 +484,21 @@ def run(bk):
     # Show the list of selectors to the user.
     form = SelectorsDialog(bk, orphaned_selectors)
     form.mainloop()
-    if parameters['stop_']:
+    if SelectorsDialog.stop_plugin:
         return -1
 
     # Delete selectors chosen by the user.
     css_to_change = {}
     old_rule, counter = None, 0
-    for x in orphaned_dict.values():
-        if x[1].get() == 1:
-            if x[0][1] == old_rule:
+    for sel_data, to_delete in SelectorsDialog.orphaned_dict.values():
+        if to_delete.get() == 1:
+            if sel_data[1] == old_rule:
                 counter += 1
             else:
                 counter = 0
-            del x[0][1].selectorList[x[0][3]-counter]
-            old_rule = x[0][1]
-            css_to_change[x[0][0]] = x[0][4].cssText
+            del sel_data[1].selectorList[sel_data[3]-counter]
+            old_rule = sel_data[1]
+            css_to_change[sel_data[0]] = sel_data[4].cssText
     for css_id, css_text in css_to_change.items():
         bk.writefile(css_id, css_text)
     return 0
