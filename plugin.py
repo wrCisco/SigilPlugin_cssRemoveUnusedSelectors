@@ -145,6 +145,8 @@ class PrefsDialog(object):
         top.mainframe.columnconfigure(2, weight=1)
         top.mainframe.columnconfigure(3, weight=0)
         top.mainframe.columnconfigure(4, weight=0)
+        
+        top.grab_set()
 
     def get_initial_values(self, top):
         if self.prefs['indent'] == "\t":
@@ -238,20 +240,20 @@ class InfoDialog(Tk):
         self.mainframe.columnconfigure(3, weight=0)
 
     def parseErrors(self, bk, css_to_jump=None, css_to_parse=None, css_warnings=None):
-        par_msg = ''
+        par_msg = ""
         if css_to_jump:
             for file_, err in css_to_jump.items():
                 filename = href_to_basename(bk.id_to_href(file_))
-                par_msg += "I couldn't parse {} due to\n{}\n".format(filename, err)
+                par_msg += "I couldn't parse {} due to\n{}\n\n".format(filename, err)
         if css_warnings:
             for file_, warn in css_warnings.items():
                 filename = href_to_basename(bk.id_to_href(file_))
                 par_msg += ("Warning: Found unknown @rule in {} at line {}: {}. "
-                            "Text of unknown rules might not be preserved.".format(
+                            "Text of unknown rules might not be preserved.\n\n".format(
                                                     filename, warn[1], warn[0]))
         if css_to_parse:
             files_to_parse = ", ".join(css_to_parse)
-            par_msg += "\nParse will be done on {}".format(files_to_parse)
+            par_msg += "Parse will be done on {}".format(files_to_parse)
         self.msg.set(par_msg)
 
     def prefs_dlg(self, bk, prefs):
