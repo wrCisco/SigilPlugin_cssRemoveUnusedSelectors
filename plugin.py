@@ -428,7 +428,7 @@ def get_css_output_prefs(bk):
     prefs.defaults['keepEmptyRules'] = True
     prefs.defaults['omitLastSemicolon'] = False
     prefs.defaults['omitLeadingZero'] = False
-    prefs.defaults['blankLinesAfterRules'] = 1 * b'\n'
+    prefs.defaults['blankLinesAfterRules'] = 1 * '\n'
     prefs.defaults['formatUnknownRules'] = False
     return prefs
 
