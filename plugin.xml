@@ -3,10 +3,9 @@
   <name>cssRemoveUnusedSelectors</name>
   <type>edit</type>
   <author>Francesco Martini</author>
-  <description>Removes from all css files all unused selectors and rules.
-    Raises a warning if encounters errors in parsing css files.</description>
+  <description>Removes unused selectors and rules from css.</description>
   <engine>python3.4</engine>
-  <version>0.2.1</version>
+  <version>0.2.2</version>
   <autostart>true</autostart>
   <autoclose>true</autoclose>
   <oslist>osx,unx,win</oslist>
