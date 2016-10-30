@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # The MIT License (MIT)
 #
@@ -25,13 +26,20 @@
 
 from tkinter import *
 from tkinter import ttk
+from collections import OrderedDict
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
-from collections import OrderedDict
 import cssutils
 import sys
 import customCssutils
 
+
+# Sigil 0.9.7 broke compatibility in reading css and js files.
+def read_css(bk, css):
+    if bk.launcher_version() < 20160909:
+        return bk.readfile(css).decode()
+    else:
+        return bk.readfile(css)
 
 # As from https://pythonhosted.org/cssselect/#supported-selectors
 NEVER_MATCH = (":hover",
@@ -239,10 +247,10 @@ class InfoDialog(Tk):
         self.mainframe.columnconfigure(2, weight=0)
         self.mainframe.columnconfigure(3, weight=0)
 
-    def parseErrors(self, bk, css_to_jump=None, css_to_parse=None, css_warnings=None):
+    def parseErrors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
         par_msg = ""
-        if css_to_jump:
-            for file_, err in css_to_jump.items():
+        if css_to_skip:
+            for file_, err in css_to_skip.items():
                 filename = href_to_basename(bk.id_to_href(file_))
                 par_msg += "I couldn't parse {} due to\n{}\n\n".format(filename, err)
         if css_warnings:
@@ -300,7 +308,7 @@ class SelectorsDialog(Tk):
 
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
-                sel_and_css = selector_tuple[2].selectorText+" ({})".format(css_filename)
+                sel_and_css = "{} ({})".format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
                 orphaned[selector_key] = [selector_tuple, BooleanVar()]
                 sel_checkbutton = ttk.Checkbutton(self.mainframe,
@@ -385,15 +393,15 @@ def preParseCss(bk, parser):
     For safety reason, every exception raised during css parsing
     will cause the css to be left untouched.
     """
-    css_to_jump = {}
+    css_to_skip = {}
     css_warnings = {}
     css_to_parse = []
     for css_id, css_href in bk.css_iter():
-        css_string = bk.readfile(css_id).decode()
+        css_string = read_css(bk, css_id)
         try:
             parsed = parser.parseString(css_string)
         except Exception as E: # cssutils.xml.dom.HierarchyRequestErr as E:
-            css_to_jump[css_id] = E
+            css_to_skip[css_id] = E
         else:
             # 0 means UNKNOWN_RULE, as from cssutils.css.cssrule.CSSRule
             for unknown_rule in parsed.cssRules.rulesOfType(0):
@@ -401,18 +409,18 @@ def preParseCss(bk, parser):
                 css_warnings[css_id] = (unknown_rule.atkeyword, line)
                 break
             css_to_parse.append(css_id)
-    return css_to_jump, css_to_parse, css_warnings
+    return css_to_skip, css_to_parse, css_warnings
 
 
 def set_css_output_prefs(bk, prefs):
     """
     As from https://pythonhosted.org/cssutils/docs/serialize.html
     """
-    cssutils.ser.prefs.indent = prefs['indent'] # 2 * ' '
-    cssutils.ser.prefs.indentClosingBrace = prefs['indentClosingBrace'] # False
-    cssutils.ser.prefs.keepEmptyRules = prefs['keepEmptyRules'] # True
-    cssutils.ser.prefs.omitLastSemicolon = prefs['omitLastSemicolon'] # False
-    cssutils.ser.prefs.omitLeadingZero = prefs['omitLeadingZero'] # False
+    cssutils.ser.prefs.indent = prefs['indent']
+    cssutils.ser.prefs.indentClosingBrace = prefs['indentClosingBrace']
+    cssutils.ser.prefs.keepEmptyRules = prefs['keepEmptyRules']
+    cssutils.ser.prefs.omitLastSemicolon = prefs['omitLastSemicolon']
+    cssutils.ser.prefs.omitLeadingZero = prefs['omitLeadingZero']
 
     # custom prefs, not in cssutils
     cssutils.ser.prefs.blankLinesAfterRules = prefs['blankLinesAfterRules']
@@ -423,7 +431,7 @@ def set_css_output_prefs(bk, prefs):
 
 def get_css_output_prefs(bk):
     prefs = bk.getPrefs()
-    prefs.defaults['indent'] = "\t" #2 * ' '
+    prefs.defaults['indent'] = "\t"  # 2 * ' '
     prefs.defaults['indentClosingBrace'] = False
     prefs.defaults['keepEmptyRules'] = True
     prefs.defaults['omitLastSemicolon'] = False
@@ -446,10 +454,10 @@ def run(bk):
     cssutils.setSerializer(customCssutils.MyCSSSerializer())
     prefs = get_css_output_prefs(bk)
     parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
-    css_to_jump, css_to_parse, css_warnings = preParseCss(bk, parser)
+    css_to_skip, css_to_parse, css_warnings = preParseCss(bk, parser)
 
     form = InfoDialog(bk, prefs)
-    form.parseErrors(bk, css_to_jump, css_to_parse, css_warnings)
+    form.parseErrors(bk, css_to_skip, css_to_parse, css_warnings)
     form.mainloop()
     if InfoDialog.stop_plugin:
         return -1
@@ -457,8 +465,8 @@ def run(bk):
     # Parse files to create the list of "orphaned selectors"
     orphaned_selectors = []
     for css_id, css_href in bk.css_iter():
-        if css_id not in css_to_jump.keys():
-            css_string = bk.readfile(css_id).decode()
+        if css_id not in css_to_skip.keys():
+            css_string = read_css(bk, css_id)
             parsed_css = parser.parseString(css_string)
             namespaces_dict = cssNamespaces(parsed_css)
             for rule in styleRules(parsed_css):
