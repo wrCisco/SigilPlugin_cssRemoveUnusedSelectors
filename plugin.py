@@ -240,7 +240,7 @@ class InfoDialog(Tk):
         self.mainframe.columnconfigure(2, weight=0)
         self.mainframe.columnconfigure(3, weight=0)
 
-    def parseErrors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
+    def parse_errors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
         par_msg = ""
         if css_to_skip:
             for file_, err in css_to_skip.items():
@@ -335,7 +335,7 @@ def read_css(bk, css):
         return bk.readfile(css)
 
 
-def styleRules(rules_collector):
+def style_rules(rules_collector):
     """
     Yields style rules in a css, both at top level and nested inside
     @media rules (unlimited nesting levels: sooner or later cssutils
@@ -345,11 +345,11 @@ def styleRules(rules_collector):
         if rule.typeString == "STYLE_RULE":
             yield rule
         elif rule.typeString == "MEDIA_RULE":
-            for nested_rule in styleRules(rule):
+            for nested_rule in style_rules(rule):
                 yield nested_rule
 
 
-def cssNamespaces(css):
+def css_namespaces(css):
     """
     Returns a dictionary of namespace rules in css.
     """
@@ -360,7 +360,7 @@ def cssNamespaces(css):
     return namespaces
 
 
-def selectorExists(parsed_xhtml, selector, namespaces_dict):
+def selector_exists(parsed_xhtml, selector, namespaces_dict):
     """
     Converts selector's text in XPath and make a search in xhtml file.
     Returns True if it finds a correspondence or the translation of the
@@ -378,7 +378,7 @@ def selectorExists(parsed_xhtml, selector, namespaces_dict):
     return False
 
 
-def ignoreSelectors(selector_text):
+def ignore_selectors(selector_text):
     """
     Jump over the selectors that can't match anything
     (pseudo-classes like :hover and the like).
@@ -389,7 +389,7 @@ def ignoreSelectors(selector_text):
     return False
 
 
-def preParseCss(bk, parser):
+def pre_parse_css(bk, parser):
     """
     For safety reason, every exception raised during css parsing
     will cause the css to be left untouched.
@@ -455,10 +455,10 @@ def run(bk):
     cssutils.setSerializer(customCssutils.MyCSSSerializer())
     prefs = get_css_output_prefs(bk)
     parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
-    css_to_skip, css_to_parse, css_warnings = preParseCss(bk, parser)
+    css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, parser)
 
     form = InfoDialog(bk, prefs)
-    form.parseErrors(bk, css_to_skip, css_to_parse, css_warnings)
+    form.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
     form.mainloop()
     if InfoDialog.stop_plugin:
         return -1
@@ -469,21 +469,21 @@ def run(bk):
         if css_id not in css_to_skip.keys():
             css_string = read_css(bk, css_id)
             parsed_css = parser.parseString(css_string)
-            namespaces_dict = cssNamespaces(parsed_css)
-            for rule in styleRules(parsed_css):
+            namespaces_dict = css_namespaces(parsed_css)
+            for rule in style_rules(parsed_css):
                 for selector_index, selector in enumerate(rule.selectorList):
                     maintain_selector = False
-                    if ignoreSelectors(selector.selectorText):
+                    if ignore_selectors(selector.selectorText):
                         continue
                     for xhtml_id, xhtml_href in bk.text_iter():
                         xml_parser = etree.XMLParser(resolve_entities=False)
-                        if selectorExists(etree.XML(bk.readfile(xhtml_id).encode('utf-8'),
-                                                    xml_parser),
-                                          selector, namespaces_dict):
+                        if selector_exists(etree.XML(bk.readfile(xhtml_id).encode('utf-8'),
+                                                     xml_parser),
+                                           selector, namespaces_dict):
                             maintain_selector = True
                             break
-                        if selectorExists(etree.HTML(bk.readfile(xhtml_id).encode('utf-8')),
-                                          selector, namespaces_dict):
+                        if selector_exists(etree.HTML(bk.readfile(xhtml_id).encode('utf-8')),
+                                           selector, namespaces_dict):
                             maintain_selector = True
                             break
                     if not maintain_selector:
