@@ -34,13 +34,6 @@ import sys
 import customCssutils
 
 
-# Sigil 0.9.7 broke compatibility in reading css and js files.
-def read_css(bk, css):
-    if bk.launcher_version() < 20160909:
-        return bk.readfile(css).decode()
-    else:
-        return bk.readfile(css)
-
 # As from https://pythonhosted.org/cssselect/#supported-selectors
 NEVER_MATCH = (":hover",
                ":active",
@@ -332,6 +325,14 @@ class SelectorsDialog(Tk):
     def proceed(self):
         SelectorsDialog.stop_plugin = False
         self.destroy()
+
+
+# Sigil 0.9.7 broke compatibility in reading css and js files.
+def read_css(bk, css):
+    try:
+        return bk.readfile(css).decode()
+    except AttributeError:
+        return bk.readfile(css)
 
 
 def styleRules(rules_collector):
