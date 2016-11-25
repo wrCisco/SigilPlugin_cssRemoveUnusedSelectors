@@ -380,7 +380,7 @@ def selector_exists(parsed_xhtml, selector, namespaces_dict):
 
 def ignore_selectors(selector_text):
     """
-    Jump over the selectors that can't match anything
+    Skip the selectors that can't match anything
     (pseudo-classes like :hover and the like).
     """
     for pseudo_class in NEVER_MATCH:
