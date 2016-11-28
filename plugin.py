@@ -357,6 +357,18 @@ def css_namespaces(css):
     for rule in css.cssRules:
         if rule.typeString == "NAMESPACE_RULE":
             namespaces[rule.prefix] = rule.namespaceURI
+    # Empty namespaces (without prefix) can't be translated to XPath.
+    # TODO: Should it be taken into account somehow (maybe adding a prefix to all unprefixed type selectors)?
+    if namespaces.get("", None):
+        prefix = ""
+        while True:
+            prefix += "a"
+            try:
+                namespaces[prefix]
+            except KeyError:
+                namespaces[prefix] = namespaces[""]
+                break
+        namespaces.pop("")
     return namespaces
 
 
