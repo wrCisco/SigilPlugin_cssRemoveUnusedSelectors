@@ -352,35 +352,35 @@ def style_rules(rules_collector):
 def css_namespaces(css):
     """
     Returns a dictionary of namespace rules in css.
+    If there is a default/unprefixed namespace (which isn't
+    translatable to XPath), adds an arbitrary prefix to it.
     """
     namespaces = {}
     for rule in css.cssRules:
         if rule.typeString == "NAMESPACE_RULE":
             namespaces[rule.prefix] = rule.namespaceURI
-    # Empty namespaces (without prefix) can't be translated to XPath.
-    # TODO: Should it be taken into account somehow (maybe adding a prefix to all unprefixed type selectors)?
+    default_prefix = ""
     if namespaces.get("", None):
-        prefix = ""
         while True:
-            prefix += "a"
+            default_prefix += "a"
             try:
-                namespaces[prefix]
+                namespaces[default_prefix]
             except KeyError:
-                namespaces[prefix] = namespaces[""]
+                namespaces[default_prefix] = namespaces[""]
                 break
         namespaces.pop("")
-    return namespaces
+    return namespaces, default_prefix
 
 
 def selector_exists(parsed_xhtml, selector, namespaces_dict):
     """
-    Converts selector's text in XPath and make a search in xhtml file.
+    Converts selector's text to XPath and make a search in xhtml file.
     Returns True if it finds a correspondence or the translation of the
     selector to XPath is not yet implemented by cssselect, False otherwise.
     """
     try:
         if cssselect.CSSSelector(
-                selector.selectorText,
+                selector,
                 translator="xhtml",
                 namespaces=namespaces_dict
                 )(parsed_xhtml):
@@ -399,6 +399,24 @@ def ignore_selectors(selector_text):
         if pseudo_class in selector_text:
             return True
     return False
+
+
+def add_default_prefix(prefix, selector_text):
+    """
+    Adds prefix to all unprefixed type selector tokens (tag names)
+    in selector_text. Returns prefixed selector.
+    """
+    selector_ns = ""
+    # https://www.w3.org/TR/css-syntax-3/#input-preprocessing
+    # states that \r, \f and \r\n  must be replaced by \n
+    # before tokenization.
+    for token in re.split(r'(?<!\\)([ \n\t]+)', selector_text):
+        if (re.match(r"-?(?:[A-Za-z_]|\\[^\n]|[^\u0000-\u007F])", token)
+                and not re.search(r'(?<!\\)\|', token)):
+            selector_ns += "{}|{}".format(prefix, token)
+        else:
+            selector_ns += token
+    return selector_ns
 
 
 def pre_parse_css(bk, parser):
@@ -481,21 +499,28 @@ def run(bk):
         if css_id not in css_to_skip.keys():
             css_string = read_css(bk, css_id)
             parsed_css = parser.parseString(css_string)
-            namespaces_dict = css_namespaces(parsed_css)
+            namespaces_dict, default_prefix = css_namespaces(parsed_css)
             for rule in style_rules(parsed_css):
                 for selector_index, selector in enumerate(rule.selectorList):
                     maintain_selector = False
                     if ignore_selectors(selector.selectorText):
                         continue
+                    # If css specifies a default namespace, the default prefix
+                    # must be added to every unprefixed type selector.
+                    if default_prefix:
+                        selector_ns = add_default_prefix(default_prefix,
+                                                         selector.selectorText)
+                    else:
+                        selector_ns = selector.selectorText
                     for xhtml_id, xhtml_href in bk.text_iter():
                         xml_parser = etree.XMLParser(resolve_entities=False)
                         if selector_exists(etree.XML(bk.readfile(xhtml_id).encode('utf-8'),
                                                      xml_parser),
-                                           selector, namespaces_dict):
+                                           selector_ns, namespaces_dict):
                             maintain_selector = True
                             break
                         if selector_exists(etree.HTML(bk.readfile(xhtml_id).encode('utf-8')),
-                                           selector, namespaces_dict):
+                                           selector.selectorText, namespaces_dict):
                             maintain_selector = True
                             break
                     if not maintain_selector:
