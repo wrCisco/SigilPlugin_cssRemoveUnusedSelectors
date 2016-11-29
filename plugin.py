@@ -523,7 +523,13 @@ def run(bk):
                                            selector.selectorText, namespaces_dict):
                             maintain_selector = True
                             break
-
+                    for id, href, mime in bk.manifest_iter():
+                        if mime != 'application/xhtml+xml' and mime.endswith('xml'):
+                            if selector_exists(etree.XML(bk.readfile(id).encode('utf-8'),
+                                                         xml_parser),
+                                               selector_ns, namespaces_dict):
+                                maintain_selector = True
+                                break
                     if not maintain_selector:
                         orphaned_selectors.append((css_id, rule,
                                                    rule.selectorList[selector_index],
