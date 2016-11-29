@@ -484,8 +484,9 @@ def href_to_basename(href, ow=None):
 def run(bk):
     cssutils.setSerializer(customCssutils.MyCSSSerializer())
     prefs = get_css_output_prefs(bk)
-    parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
-    css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, parser)
+    xml_parser = etree.XMLParser(resolve_entities=False)
+    css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
+    css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, css_parser)
 
     form = InfoDialog(bk, prefs)
     form.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
@@ -498,7 +499,7 @@ def run(bk):
     for css_id, css_href in bk.css_iter():
         if css_id not in css_to_skip.keys():
             css_string = read_css(bk, css_id)
-            parsed_css = parser.parseString(css_string)
+            parsed_css = css_parser.parseString(css_string)
             namespaces_dict, default_prefix = css_namespaces(parsed_css)
             for rule in style_rules(parsed_css):
                 for selector_index, selector in enumerate(rule.selectorList):
@@ -513,7 +514,6 @@ def run(bk):
                     else:
                         selector_ns = selector.selectorText
                     for xhtml_id, xhtml_href in bk.text_iter():
-                        xml_parser = etree.XMLParser(resolve_entities=False)
                         if selector_exists(etree.XML(bk.readfile(xhtml_id).encode('utf-8'),
                                                      xml_parser),
                                            selector_ns, namespaces_dict):
@@ -523,6 +523,7 @@ def run(bk):
                                            selector.selectorText, namespaces_dict):
                             maintain_selector = True
                             break
+
                     if not maintain_selector:
                         orphaned_selectors.append((css_id, rule,
                                                    rule.selectorList[selector_index],
