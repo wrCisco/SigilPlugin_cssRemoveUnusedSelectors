@@ -31,6 +31,7 @@ from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 import cssutils
 import sys
+import re
 import customCssutils
 
 
@@ -51,7 +52,7 @@ class PrefsDialog(object):
         if prefs:
             self.prefs = prefs
         else:
-            self.prefs = get_css_output_prefs(bk)
+            self.prefs = get_prefs(bk)
         top = self.top = Toplevel(parent)
         top.title("Preferences")
         top.resizable(width=TRUE, height=TRUE)
@@ -228,17 +229,27 @@ class InfoDialog(Tk):
         self.labelInfo = ttk.Label(self.mainframe,
                                    textvariable=self.msg, wraplength=600)
         self.labelInfo.grid(row=0, column=0, columnspan=4, sticky=(W,E), pady=5)
+
+        self.parseAllXMLFiles = BooleanVar()
+        self.checkParseAllXMLFiles = ttk.Checkbutton(self.mainframe,
+                                                     text='Parse every xml file, not only xhtml.',
+                                                     variable=self.parseAllXMLFiles,
+                                                     onvalue=True,
+                                                     offvalue=False)
+        self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky=(W,E))
         
         ttk.Button(self.mainframe, text='Set preferences',
-                   command=lambda: self.prefs_dlg(bk, prefs)).grid(row=1, column=0, sticky=(W,E))
+                   command=lambda: self.prefs_dlg(bk, prefs)).grid(row=2, column=0, sticky=(W,E))
         ttk.Button(self.mainframe, text='Continue',
-                   command=lambda: self.proceed(bk, prefs)).grid(row=1, column=2, sticky=(W,E))
+                   command=lambda: self.proceed(bk, prefs)).grid(row=2, column=2, sticky=(W,E))
         ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=1, column=3, sticky=(W,E))
+                   command=self.quit).grid(row=2, column=3, sticky=(W,E))
         self.mainframe.columnconfigure(0, weight=0)
         self.mainframe.columnconfigure(1, weight=1)
         self.mainframe.columnconfigure(2, weight=0)
         self.mainframe.columnconfigure(3, weight=0)
+
+        self.get_initial_values(prefs)
 
     def parse_errors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
         par_msg = ""
@@ -260,11 +271,22 @@ class InfoDialog(Tk):
     def prefs_dlg(self, bk, prefs):
         self.set_pref = PrefsDialog(self, bk, prefs)
 
+    def get_initial_values(self, prefs):
+        if prefs['parseAllXMLFiles']:
+            self.parseAllXMLFiles.set(1)
+        else:
+            self.parseAllXMLFiles.set(0)
+
     def proceed(self, bk, prefs):
+        if self.parseAllXMLFiles.get() == 1:
+            prefs['parseAllXMLFiles'] = True
+        else:
+            prefs['parseAllXMLFiles'] = False
         try:
             self.set_pref
         except AttributeError:
-            set_css_output_prefs(bk, prefs)
+            set_css_output_prefs(bk, prefs, False)
+        bk.savePrefs(prefs)
         InfoDialog.stop_plugin = False
         self.destroy()
 
@@ -443,7 +465,7 @@ def pre_parse_css(bk, parser):
     return css_to_skip, css_to_parse, css_warnings
 
 
-def set_css_output_prefs(bk, prefs):
+def set_css_output_prefs(bk, prefs, save_on_file=True):
     """
     As from https://pythonhosted.org/cssutils/docs/serialize.html
     """
@@ -457,11 +479,14 @@ def set_css_output_prefs(bk, prefs):
     cssutils.ser.prefs.blankLinesAfterRules = prefs['blankLinesAfterRules']
     cssutils.ser.prefs.formatUnknownRules = prefs['formatUnknownRules']
 
-    bk.savePrefs(prefs)
+    if save_on_file:
+        bk.savePrefs(prefs)
 
 
-def get_css_output_prefs(bk):
+def get_prefs(bk):
     prefs = bk.getPrefs()
+
+    # CSS output prefs
     prefs.defaults['indent'] = "\t"  # 2 * ' '
     prefs.defaults['indentClosingBrace'] = False
     prefs.defaults['keepEmptyRules'] = True
@@ -469,6 +494,10 @@ def get_css_output_prefs(bk):
     prefs.defaults['omitLeadingZero'] = False
     prefs.defaults['blankLinesAfterRules'] = 1 * '\n'
     prefs.defaults['formatUnknownRules'] = False
+
+    # Other prefs
+    prefs.defaults['parseAllXMLFiles'] = True
+
     return prefs
 
 
@@ -483,7 +512,7 @@ def href_to_basename(href, ow=None):
 
 def run(bk):
     cssutils.setSerializer(customCssutils.MyCSSSerializer())
-    prefs = get_css_output_prefs(bk)
+    prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
     css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, css_parser)
@@ -493,6 +522,8 @@ def run(bk):
     form.mainloop()
     if InfoDialog.stop_plugin:
         return -1
+
+    parseAllXMLFiles = prefs['parseAllXMLFiles']
 
     # Parse files to create the list of "orphaned selectors"
     orphaned_selectors = []
@@ -513,20 +544,15 @@ def run(bk):
                                                          selector.selectorText)
                     else:
                         selector_ns = selector.selectorText
-                    for xhtml_id, xhtml_href in bk.text_iter():
-                        if selector_exists(etree.XML(bk.readfile(xhtml_id).encode('utf-8'),
-                                                     xml_parser),
-                                           selector_ns, namespaces_dict):
-                            maintain_selector = True
-                            break
-                        if selector_exists(etree.HTML(bk.readfile(xhtml_id).encode('utf-8')),
-                                           selector.selectorText, namespaces_dict):
-                            maintain_selector = True
-                            break
-                    for id, href, mime in bk.manifest_iter():
-                        if mime != 'application/xhtml+xml' and mime.endswith('xml'):
-                            if selector_exists(etree.XML(bk.readfile(id).encode('utf-8'),
+                    for file_id, href, mime in bk.manifest_iter():
+                        if (parseAllXMLFiles and re.search(r'[/+]xml\b', mime)) \
+                                or mime == 'application/xhtml+xml':
+                            if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
                                                          xml_parser),
+                                               selector_ns, namespaces_dict):
+                                maintain_selector = True
+                                break
+                            if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
                                                selector_ns, namespaces_dict):
                                 maintain_selector = True
                                 break
