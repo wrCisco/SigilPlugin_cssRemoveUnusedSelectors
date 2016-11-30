@@ -109,32 +109,6 @@ class PrefsDialog(object):
                                                         offvalue=False)
         top.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=W)
 
-        # TODO: make a new custom serializer to leave the text untouched as much as possible
-        # self.leaveCodeAlone = BooleanVar()
-        #
-        # def toggle_freeze():
-        #     if self.leaveCodeAlone.get() == 1:
-        #         top.comboIndent.state(['disabled', 'readonly'])
-        #         top.checkIndentLastBrace.config(state=DISABLED)
-        #         top.checkKeepEmptyRules.config(state=DISABLED)
-        #         top.checkOmitSemicolon.config(state=DISABLED)
-        #         top.checkOmitZeroes.config(state=DISABLED)
-        #         top.checkFormatUnknown.config(state=DISABLED)
-        #     else:
-        #         top.comboIndent.state(['!disabled', 'readonly'])
-        #         top.checkIndentLastBrace.config(state=ACTIVE)
-        #         top.checkKeepEmptyRules.config(state=ACTIVE)
-        #         top.checkOmitSemicolon.config(state=ACTIVE)
-        #         top.checkOmitZeroes.config(state=ACTIVE)
-        #         top.checkFormatUnknown.config(state=ACTIVE)
-        #
-        # top.checkLeaveCode = ttk.Checkbutton(top.mainframe, text="Leave my coding style alone! Just delete "+\
-        #                                      "those useless selectors! (Experimental)",
-        #                                      variable=self.leaveCodeAlone, onvalue=True,
-        #                                      offvalue=False, command=toggle_freeze)
-        # top.checkLeaveCode.grid(row=7, column=0, columnspan=3, sticky=W)
-        # top.checkLeaveCode.state(['disabled'])
-
         self.get_initial_values(top)
 
         ttk.Button(top.mainframe, text='Save and continue',
