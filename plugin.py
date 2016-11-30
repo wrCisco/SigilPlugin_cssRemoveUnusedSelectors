@@ -368,18 +368,20 @@ def css_namespaces(css):
     return namespaces, default_prefix
 
 
-def selector_exists(parsed_xhtml, selector, namespaces_dict):
+def selector_exists(parsed_code, selector, namespaces_dict, is_xhtml):
     """
     Converts selector's text to XPath and make a search in xhtml file.
     Returns True if it finds a correspondence or the translation of the
     selector to XPath is not yet implemented by cssselect, False otherwise.
     """
+
+    translator = 'xhtml' if is_xhtml else 'xml'
     try:
         if cssselect.CSSSelector(
                 selector,
-                translator="xhtml",
+                translator=translator,
                 namespaces=namespaces_dict
-                )(parsed_xhtml):
+                )(parsed_code):
             return True
     except SelectorError:
         return True
@@ -519,17 +521,21 @@ def run(bk):
                     else:
                         selector_ns = selector.selectorText
                     for file_id, href, mime in bk.manifest_iter():
-                        if (parseAllXMLFiles and re.search(r'[/+]xml\b', mime)) \
-                                or mime == 'application/xhtml+xml':
-                            if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
-                                                         xml_parser),
-                                               selector_ns, namespaces_dict):
-                                maintain_selector = True
-                                break
-                            if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
-                                               selector_ns, namespaces_dict):
-                                maintain_selector = True
-                                break
+                        if mime == 'application/xhtml+xml':
+                            is_xhtml = True
+                        elif parseAllXMLFiles and re.search(r'[/+]xml\b', mime):
+                            is_xhtml = False
+                        else:
+                            continue
+                        if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
+                                                     xml_parser),
+                                           selector_ns, namespaces_dict, is_xhtml):
+                            maintain_selector = True
+                            break
+                        if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
+                                           selector_ns, namespaces_dict, is_xhtml):
+                            maintain_selector = True
+                            break
                     if not maintain_selector:
                         orphaned_selectors.append((css_id, rule,
                                                    rule.selectorList[selector_index],
