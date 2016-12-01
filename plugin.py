@@ -527,12 +527,12 @@ def run(bk):
                             is_xhtml = False
                         else:
                             continue
-                        if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
-                                                     xml_parser),
+                        if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
                                            selector_ns, namespaces_dict, is_xhtml):
                             maintain_selector = True
                             break
-                        if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
+                        if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
+                                                     xml_parser),
                                            selector_ns, namespaces_dict, is_xhtml):
                             maintain_selector = True
                             break
