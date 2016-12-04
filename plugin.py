@@ -295,6 +295,19 @@ class SelectorsDialog(Tk):
 
             orphaned = SelectorsDialog.orphaned_dict
 
+            self.toggleAll = BooleanVar()
+            self.toggleAllStr = StringVar()
+            self.toggleAllStr.set("Unselect all")
+            self.checkToggleAll = ttk.Checkbutton(self.mainframe,
+                                                  textvariable=self.toggleAllStr,
+                                                  variable=self.toggleAll,
+                                                  onvalue=True, offvalue=False,
+                                                  command=self.toggle_all)
+            self.text.window_create("end", window=self.checkToggleAll)
+            self.text.insert("end", "\n\n")
+            self.toggleAll.set(True)
+
+            self.toggle_selectors_list = []
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
                 sel_and_css = "{} ({})".format(selector_tuple[2].selectorText, css_filename)
@@ -307,6 +320,7 @@ class SelectorsDialog(Tk):
                 self.text.window_create("end", window=sel_checkbutton)
                 self.text.insert("end", "\n")
                 orphaned[selector_key][1].set(True)
+                self.toggle_selectors_list.append(orphaned[selector_key][1])
             self.text.config(state=DISABLED)
         else:
             self.labelInfo = ttk.Label(self.mainframe,
@@ -321,6 +335,16 @@ class SelectorsDialog(Tk):
     def proceed(self):
         SelectorsDialog.stop_plugin = False
         self.destroy()
+
+    def toggle_all(self):
+        if self.toggleAll.get() == 1:
+            self.toggleAllStr.set("Unselect all")
+            for toggle_var in self.toggle_selectors_list:
+                toggle_var.set(1)
+        else:
+            self.toggleAllStr.set("Select all")
+            for toggle_var in self.toggle_selectors_list:
+                toggle_var.set(0)
 
 
 # Sigil 0.9.7 broke compatibility in reading css and js files.
