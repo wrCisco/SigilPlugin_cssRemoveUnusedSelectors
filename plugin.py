@@ -43,6 +43,8 @@ NEVER_MATCH = (":hover",
                ":visited")
 
 
+
+
 class PrefsDialog(object):
     """
     Dialog to set and save preferences about css formatting.
@@ -277,6 +279,8 @@ class SelectorsDialog(Tk):
 
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
+        style = ttk.Style()
+        style.configure('TCheckbutton', background='white')
         self.title('Remove unused Selectors')
         self.resizable(width=TRUE, height=TRUE)
         self.geometry('+100+100')
@@ -297,28 +301,28 @@ class SelectorsDialog(Tk):
 
             self.toggleAll = BooleanVar()
             self.toggleAllStr = StringVar()
-            self.toggleAllStr.set("Unselect all")
+            self.toggleAllStr.set('Unselect all')
             self.checkToggleAll = ttk.Checkbutton(self.mainframe,
                                                   textvariable=self.toggleAllStr,
                                                   variable=self.toggleAll,
                                                   onvalue=True, offvalue=False,
                                                   command=self.toggle_all)
-            self.text.window_create("end", window=self.checkToggleAll)
-            self.text.insert("end", "\n\n")
+            self.text.window_create('end', window=self.checkToggleAll)
+            self.text.insert('end', '\n\n')
             self.toggleAll.set(True)
 
             self.toggle_selectors_list = []
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
-                sel_and_css = "{} ({})".format(selector_tuple[2].selectorText, css_filename)
+                sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
                 orphaned[selector_key] = [selector_tuple, BooleanVar()]
                 sel_checkbutton = ttk.Checkbutton(self.mainframe,
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
                                                   onvalue=True, offvalue=False)
-                self.text.window_create("end", window=sel_checkbutton)
-                self.text.insert("end", "\n")
+                self.text.window_create('end', window=sel_checkbutton)
+                self.text.insert('end', '\n')
                 orphaned[selector_key][1].set(True)
                 self.toggle_selectors_list.append(orphaned[selector_key][1])
             self.text.config(state=DISABLED)
@@ -332,17 +336,18 @@ class SelectorsDialog(Tk):
         ttk.Button(self.mainframe, text='Cancel',
                    command=self.quit).grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
 
+
     def proceed(self):
         SelectorsDialog.stop_plugin = False
         self.destroy()
 
     def toggle_all(self):
         if self.toggleAll.get() == 1:
-            self.toggleAllStr.set("Unselect all")
+            self.toggleAllStr.set('Unselect all')
             for toggle_var in self.toggle_selectors_list:
                 toggle_var.set(1)
         else:
-            self.toggleAllStr.set("Select all")
+            self.toggleAllStr.set('Select all')
             for toggle_var in self.toggle_selectors_list:
                 toggle_var.set(0)
 
