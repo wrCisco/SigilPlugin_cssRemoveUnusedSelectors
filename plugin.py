@@ -351,10 +351,7 @@ def css_namespaces(css):
     If there is a default/unprefixed namespace (which isn't
     translatable to XPath), adds an arbitrary prefix to it.
     """
-    namespaces = {}
-    for rule in css.cssRules:
-        if rule.typeString == "NAMESPACE_RULE":
-            namespaces[rule.prefix] = rule.namespaceURI
+    namespaces = dict(css.namespaces)
     default_prefix = ""
     if namespaces.get("", None):
         while True:
