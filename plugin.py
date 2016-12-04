@@ -403,6 +403,9 @@ def add_default_prefix(prefix, selector_text):
     """
     Adds prefix to all unprefixed type selector tokens (tag names)
     in selector_text. Returns prefixed selector.
+    Note: regex here are valid thanks to cssutils's normalization
+    of selectors text (e.g. optional whitespace after escape sequences
+    is removed).
     """
     selector_ns = ""
     # https://www.w3.org/TR/css-syntax-3/#input-preprocessing
@@ -415,6 +418,20 @@ def add_default_prefix(prefix, selector_text):
         else:
             selector_ns += token
     return selector_ns
+
+
+def clean_generic_prefixes(selector_text):
+    """
+    Removes '|' (no namespace) and '*|' (every namespace)
+    at the beginning of type and attribute selector tokens.
+    Note: the regex here are valid only thanks to cssutils's
+    normalization of selectors text (e.g. optional whitespace between
+    '[' and qualified name of the attribute is removed).
+    """
+    selector = ''
+    for token in re.split(r'(?<!\\)([ \n\t]+|\[)', selector_text):
+        selector += re.sub(r'^\*?\|', '', token)
+    return selector
 
 
 def pre_parse_css(bk, parser):
@@ -520,6 +537,7 @@ def run(bk):
                                                          selector.selectorText)
                     else:
                         selector_ns = selector.selectorText
+                    selector_ns = clean_generic_prefixes(selector_ns)
                     for file_id, href, mime in bk.manifest_iter():
                         if mime == 'application/xhtml+xml':
                             is_xhtml = True
