@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: urf-8 -*-
+# -*- coding: utf-8 -*-
 
 
 # Copyright (c) 2016 Francesco Martini
