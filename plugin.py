@@ -18,14 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from collections import OrderedDict
 from tkinter import *
 from tkinter import ttk
-from collections import OrderedDict
+import sys
+import re
+
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 import cssutils
-import sys
-import re
+
 import customCssutils
 
 
