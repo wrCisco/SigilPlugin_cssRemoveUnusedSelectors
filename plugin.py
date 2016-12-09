@@ -425,18 +425,18 @@ def add_default_prefix(prefix, selector_text):
     """
     Adds prefix to all unprefixed type selector tokens (tag names)
     in selector_text. Returns prefixed selector.
-    Note: regex here are valid thanks to cssutils's normalization
-    of selectors text (e.g. optional whitespace after escape sequences
-    is removed).
     """
-    selector_ns = ""
+    # Note: regex here are valid thanks to cssutils's normalization
+    # of selectors text (e.g. optional whitespace after escape sequences
+    # is removed).
+    selector_ns = ''
     # https://www.w3.org/TR/css-syntax-3/#input-preprocessing
     # states that \r, \f and \r\n  must be replaced by \n
     # before tokenization.
-    for token in re.split(r'(?<!\\)([ \n\t]+)', selector_text):
-        if (re.match(r"-?(?:[A-Za-z_]|\\[^\n]|[^\u0000-\u007F])", token)
+    for token in re.split(r'(?<!\\)([ \n\t])', selector_text):
+        if (re.match(r'-?(?:[A-Za-z_]|\\[^\n]|[^\u0000-\u007F])', token)
                 and not re.search(r'(?<!\\)\|', token)):
-            selector_ns += "{}|{}".format(prefix, token)
+            selector_ns += '{}|{}'.format(prefix, token)
         else:
             selector_ns += token
     return selector_ns
@@ -446,12 +446,13 @@ def clean_generic_prefixes(selector_text):
     """
     Removes '|' (no namespace) and '*|' (every namespace)
     at the beginning of type and attribute selector tokens.
-    Note: the regex here are valid only thanks to cssutils's
-    normalization of selectors text (e.g. optional whitespace between
-    '[' and qualified name of the attribute is removed).
     """
+    # Note: regex here are valid thanks to cssutils's normalization
+    # of selectors text (e.g. optional whitespace between
+    # '[' and qualified name of the attribute is removed).
+
     selector = ''
-    for token in re.split(r'(?<!\\)([ \n\t]+|\[)', selector_text):
+    for token in re.split(r'(?<!\\)([ \n\t]|\[)', selector_text):
         selector += re.sub(r'^\*?\|', '', token)
     return selector
 
