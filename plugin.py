@@ -247,7 +247,7 @@ class InfoDialog(Tk):
                                                     filename, warn[1], warn[0]))
         if css_to_parse:
             files_to_parse = ", ".join(css_to_parse)
-            par_msg += "Parse will be done on {}".format(files_to_parse)
+            par_msg += "Analysis will be done on {}".format(files_to_parse)
         if not par_msg:
             par_msg = "No css found."
         self.msg.set(par_msg)
