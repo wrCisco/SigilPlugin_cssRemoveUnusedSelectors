@@ -49,7 +49,7 @@ class PrefsDialog(object):
             self.prefs = prefs
         else:
             self.prefs = get_prefs(bk)
-        top = self.top = Toplevel(parent)
+        top = Toplevel(parent)
         top.title("Preferences")
         top.resizable(width=TRUE, height=TRUE)
         top.geometry('+100+100')
@@ -107,16 +107,21 @@ class PrefsDialog(object):
 
         self.get_initial_values(top)
 
-        ttk.Button(top.mainframe, text='Save and continue',
-                   command=lambda: self.save_and_go(top, bk)).grid(row=7, column=3, sticky=E)
-        ttk.Button(top.mainframe, text='Cancel',
-                   command=top.destroy).grid(row=7, column=4, sticky=(W,E))
+        cont_button = ttk.Button(top.mainframe, text='Save and continue',
+                   command=lambda: self.save_and_go(top, bk))
+        cont_button.grid(row=7, column=3, sticky=E)
+        canc_button = ttk.Button(top.mainframe, text='Cancel',
+                   command=top.destroy)
+        canc_button.grid(row=7, column=4, sticky=(W,E))
+        cont_button.bind('<Return>', lambda event: self.save_and_go(top, bk))
+        canc_button.bind('<Return>', lambda event: top.destroy())
 
         top.mainframe.columnconfigure(0, weight=0)
         top.mainframe.columnconfigure(1, weight=0)
         top.mainframe.columnconfigure(2, weight=1)
         top.mainframe.columnconfigure(3, weight=0)
         top.mainframe.columnconfigure(4, weight=0)
+        cont_button.focus_set()
         
         top.grab_set()
 
@@ -208,16 +213,23 @@ class InfoDialog(Tk):
                                                      offvalue=False)
         self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky=(W,E))
         
-        ttk.Button(self.mainframe, text='Set preferences',
-                   command=lambda: self.prefs_dlg(bk, prefs)).grid(row=2, column=0, sticky=(W,E))
-        ttk.Button(self.mainframe, text='Continue',
-                   command=lambda: self.proceed(bk, prefs)).grid(row=2, column=2, sticky=(W,E))
-        ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=2, column=3, sticky=(W,E))
+        pref_button = ttk.Button(self.mainframe, text='Set preferences',
+                                 command=lambda: self.prefs_dlg(bk, prefs))
+        pref_button.grid(row=2, column=0, sticky=(W,E))
+        cont_button = ttk.Button(self.mainframe, text='Continue',
+                                 command=lambda: self.proceed(bk, prefs))
+        cont_button.grid(row=2, column=2, sticky=(W,E))
+        canc_button = ttk.Button(self.mainframe, text='Cancel', command=self.quit)
+        canc_button.grid(row=2, column=3, sticky=(W,E))
+        pref_button.bind('<Return>', lambda event: self.prefs_dlg(bk, prefs))
+        cont_button.bind('<Return>', lambda event: self.proceed(bk, prefs))
+        canc_button.bind('<Return>', lambda event: self.quit())
+
         self.mainframe.columnconfigure(0, weight=0)
         self.mainframe.columnconfigure(1, weight=1)
         self.mainframe.columnconfigure(2, weight=0)
         self.mainframe.columnconfigure(3, weight=0)
+        cont_button.focus_set()
 
         self.get_initial_values(prefs)
 
@@ -276,10 +288,10 @@ class SelectorsDialog(Tk):
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
         style = ttk.Style()
-        style.configure('TCheckbutton', background='white')
+        style.configure('TCheckbutton', background='white', wraplength=300)
         self.title('Remove unused Selectors')
         self.resizable(width=TRUE, height=TRUE)
-        self.geometry('+100+100')
+        self.geometry('360x420+100+100')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
@@ -287,11 +299,10 @@ class SelectorsDialog(Tk):
 
         if orphaned_selectors:
             self.scrollList = Scrollbar(self.mainframe, orient=VERTICAL)
-            self.text = Text(self.mainframe, width=40, height=20,
-                                yscrollcommand=self.scrollList.set)
+            self.text = Text(self.mainframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
             self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
             self.scrollList['command'] = self.text.yview
-            self.text.grid(row=0, column=0, columnspan=3, sticky=(W,E))
+            self.text.grid(row=0, column=0, columnspan=3, sticky=(N,S,W,E))
 
             orphaned = SelectorsDialog.orphaned_dict
 
@@ -327,10 +338,18 @@ class SelectorsDialog(Tk):
                                        text="I didn't find any unused selector.")
             self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
 
-        ttk.Button(self.mainframe, text='Continue',
-                   command=self.proceed).grid(row=len(orphaned_selectors) or 1, column=1, sticky=(W,E))
-        ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit).grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
+        cont_button = ttk.Button(self.mainframe, text='Continue',
+                   command=self.proceed)
+        cont_button.grid(row=len(orphaned_selectors) or 1, column=1, sticky=(W,E))
+        canc_button = ttk.Button(self.mainframe, text='Cancel',
+                   command=self.quit)
+        canc_button.grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
+        cont_button.bind('<Return>', lambda event: self.proceed())
+        canc_button.bind('<Return>', lambda event: self.quit())
+
+        self.mainframe.columnconfigure(0, weight=1)
+        self.mainframe.rowconfigure(0, weight=1)
+        cont_button.focus_set()
 
 
     def proceed(self):
