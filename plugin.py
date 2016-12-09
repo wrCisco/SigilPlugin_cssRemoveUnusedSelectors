@@ -384,6 +384,7 @@ class SelectorsDialog(Tk):
     def update_wraplength(event, style):
         style.configure('TCheckbutton', wraplength=event.width-60)
 
+
 # Sigil 0.9.7 broke compatibility in reading css and js files.
 def read_css(bk, css):
     try:
@@ -482,14 +483,21 @@ def clean_generic_prefixes(selector_text):
     """
     Removes '|' (no namespace) and '*|' (every namespace)
     at the beginning of type and attribute selector tokens.
+    If there is at least one '*|' in selector_text, all prefixes
+    will be deleted from the selector. This isn't the formally
+    correct solution, but it's safe to use in combination with
+    html parser which is namespace agnostic.
     """
     # Note: regex here are valid thanks to cssutils's normalization
     # of selectors text (e.g. optional whitespace between
     # '[' and qualified name of the attribute is removed).
-
     selector = ''
-    for token in re.split(r'(?<!\\)([ \n\t]|\[)', selector_text):
-        selector += re.sub(r'^\*?\|', '', token)
+    if re.search(r'(?<!\\)(?:^| )\*\|', selector_text):
+        for token in re.split(r'(?<!\\)([ \n\t]|\[)', selector_text):
+            selector += re.sub(r'^.*?\|', '', token)
+    else:
+        for token in re.split(r'(?<!\\)([ \n\t]|\[)', selector_text):
+            selector += re.sub(r'^\|', '', token)
     return selector
 
 
