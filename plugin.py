@@ -291,7 +291,7 @@ class SelectorsDialog(Tk):
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
         style = ttk.Style()
-        style.configure('TCheckbutton', background='white', wraplength=300)
+        style.configure('TCheckbutton', background='white', wraplength=290)
         self.title('Remove unused Selectors')
         self.resizable(width=TRUE, height=TRUE)
         self.geometry('360x420+100+100')
@@ -380,9 +380,9 @@ class SelectorsDialog(Tk):
             for toggle_var in self.toggle_selectors_list:
                 toggle_var.set(0)
 
-    @staticmethod
-    def update_wraplength(event, style):
-        style.configure('TCheckbutton', wraplength=event.width-60)
+    def update_wraplength(self, event, style):
+        style.configure('TCheckbutton',
+                        wraplength=event.width-(50+self.scrollList.winfo_reqwidth()))
 
 
 # Sigil 0.9.7 broke compatibility in reading css and js files.
