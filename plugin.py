@@ -192,6 +192,8 @@ class InfoDialog(Tk):
 
     def __init__(self, bk, prefs):
         super().__init__()
+        style = ttk.Style()
+        style.configure('myCheckbutton.TCheckbutton', padding="0 0 0 5")
         self.title('Preparing to parse...')
         self.resizable(width=TRUE, height=TRUE)
         self.geometry('+100+100')
@@ -210,7 +212,8 @@ class InfoDialog(Tk):
                                                      text='Parse every xml file, not only xhtml.',
                                                      variable=self.parseAllXMLFiles,
                                                      onvalue=True,
-                                                     offvalue=False)
+                                                     offvalue=False,
+                                                     style="myCheckbutton.TCheckbutton")
         self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky=(W,E))
         
         pref_button = ttk.Button(self.mainframe, text='Set preferences',
@@ -296,10 +299,16 @@ class SelectorsDialog(Tk):
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
         self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.mainframe.bind('<Configure>',
+                            lambda event: self.update_wraplength(event, style))
+        self.upperframe = ttk.Frame(self.mainframe, padding="0 0 0 4")
+        self.upperframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.lowerframe = ttk.Frame(self.mainframe, padding="4 0 0 0")
+        self.lowerframe.grid(column=0, row=1, sticky=(N,W,E,S))
 
         if orphaned_selectors:
-            self.scrollList = Scrollbar(self.mainframe, orient=VERTICAL)
-            self.text = Text(self.mainframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
+            self.scrollList = Scrollbar(self.upperframe, orient=VERTICAL)
+            self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
             self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
             self.scrollList['command'] = self.text.yview
             self.text.grid(row=0, column=0, columnspan=3, sticky=(N,S,W,E))
@@ -309,7 +318,7 @@ class SelectorsDialog(Tk):
             self.toggleAll = BooleanVar()
             self.toggleAllStr = StringVar()
             self.toggleAllStr.set('Unselect all')
-            self.checkToggleAll = ttk.Checkbutton(self.mainframe,
+            self.checkToggleAll = ttk.Checkbutton(self.upperframe,
                                                   textvariable=self.toggleAllStr,
                                                   variable=self.toggleAll,
                                                   onvalue=True, offvalue=False,
@@ -324,7 +333,7 @@ class SelectorsDialog(Tk):
                 sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
                 orphaned[selector_key] = [selector_tuple, BooleanVar()]
-                sel_checkbutton = ttk.Checkbutton(self.mainframe,
+                sel_checkbutton = ttk.Checkbutton(self.upperframe,
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
                                                   onvalue=True, offvalue=False)
@@ -334,23 +343,28 @@ class SelectorsDialog(Tk):
                 self.toggle_selectors_list.append(orphaned[selector_key][1])
             self.text.config(state=DISABLED)
         else:
-            self.labelInfo = ttk.Label(self.mainframe,
+            self.labelInfo = ttk.Label(self.upperframe,
                                        text="I didn't find any unused selector.")
             self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
 
-        cont_button = ttk.Button(self.mainframe, text='Continue',
-                   command=self.proceed)
-        cont_button.grid(row=len(orphaned_selectors) or 1, column=1, sticky=(W,E))
-        canc_button = ttk.Button(self.mainframe, text='Cancel',
-                   command=self.quit)
-        canc_button.grid(row=len(orphaned_selectors) or 1, column=2, sticky=(W,E))
+        cont_button = ttk.Button(self.lowerframe,
+                                 text='Continue',
+                                 command=self.proceed)
+        cont_button.grid(row=0, column=1, sticky=(W,E))
+        canc_button = ttk.Button(self.lowerframe,
+                                 text='Cancel',
+                                 command=self.quit)
+        canc_button.grid(row=0, column=2, sticky=(W,E))
         cont_button.bind('<Return>', lambda event: self.proceed())
         canc_button.bind('<Return>', lambda event: self.quit())
 
         self.mainframe.columnconfigure(0, weight=1)
         self.mainframe.rowconfigure(0, weight=1)
+        self.upperframe.columnconfigure(0, weight=1)
+        self.upperframe.rowconfigure(0, weight=1)
+        self.lowerframe.columnconfigure(0, weight=1)
+        self.lowerframe.rowconfigure(0, weight=0)
         cont_button.focus_set()
-
 
     def proceed(self):
         SelectorsDialog.stop_plugin = False
@@ -366,6 +380,9 @@ class SelectorsDialog(Tk):
             for toggle_var in self.toggle_selectors_list:
                 toggle_var.set(0)
 
+    @staticmethod
+    def update_wraplength(event, style):
+        style.configure('TCheckbutton', wraplength=event.width-60)
 
 # Sigil 0.9.7 broke compatibility in reading css and js files.
 def read_css(bk, css):
