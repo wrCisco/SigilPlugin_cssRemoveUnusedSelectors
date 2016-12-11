@@ -307,7 +307,7 @@ class SelectorsDialog(Tk):
         self.lowerframe.grid(column=0, row=1, sticky=(N,W,E,S))
 
         if orphaned_selectors:
-            self.scrollList = Scrollbar(self.upperframe, orient=VERTICAL)
+            self.scrollList = ttk.Scrollbar(self.upperframe, orient=VERTICAL)
             self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
             self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
             self.scrollList['command'] = self.text.yview
