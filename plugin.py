@@ -296,7 +296,6 @@ class SelectorsDialog(Tk):
         style.configure('TCheckbutton', background='white', wraplength=290)
         self.title('Remove unused Selectors')
         self.resizable(width=TRUE, height=TRUE)
-        self.geometry('360x420+100+100')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
@@ -309,6 +308,7 @@ class SelectorsDialog(Tk):
         self.lowerframe.grid(column=0, row=1, sticky=(N,W,E,S))
 
         if orphaned_selectors:
+            self.geometry('360x420+100+100')
             self.scrollList = ttk.Scrollbar(self.upperframe, orient=VERTICAL)
             self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
             self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
@@ -345,6 +345,7 @@ class SelectorsDialog(Tk):
                 self.toggle_selectors_list.append(orphaned[selector_key][1])
             self.text.config(state=DISABLED)
         else:
+            self.geometry('+100+100')
             self.labelInfo = ttk.Label(self.upperframe,
                                        text="I didn't find any unused selector.")
             self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
