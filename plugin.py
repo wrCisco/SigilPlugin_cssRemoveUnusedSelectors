@@ -40,7 +40,7 @@ NEVER_MATCH = (":hover",
                ":visited")
 
 
-class PrefsDialog(object):
+class PrefsDialog(Toplevel):
     """
     Dialog to set and save preferences about css formatting.
     """
@@ -50,87 +50,88 @@ class PrefsDialog(object):
             self.prefs = prefs
         else:
             self.prefs = get_prefs(bk)
-        top = Toplevel(parent)
-        top.title("Preferences")
-        top.resizable(width=TRUE, height=TRUE)
-        top.geometry('+100+100')
-        top.columnconfigure(0, weight=1)
-        top.rowconfigure(0, weight=1)
-        top.mainframe = ttk.Frame(top, padding="12 12 12 12") # padding values's order: "W N E S"
-        top.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        super().__init__(parent)
+        self.transient(parent)
+        self.title("Preferences")
+        self.resizable(width=TRUE, height=TRUE)
+        self.geometry('+100+100')
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
+        self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
 
         self.indent = StringVar()
-        top.labelIndent = ttk.Label(top.mainframe, text="Indent:")
-        top.labelIndent.grid(row=0, column=0, sticky=(W,E))
-        top.comboIndent = ttk.Combobox(top.mainframe, textvariable=self.indent,
+        self.labelIndent = ttk.Label(self.mainframe, text="Indent:")
+        self.labelIndent.grid(row=0, column=0, sticky=(W,E))
+        self.comboIndent = ttk.Combobox(self.mainframe, textvariable=self.indent,
                                        values=('No indentation', '1 space', '2 spaces',
                                                '3 spaces', '4 spaces', '1 tab'))
-        top.comboIndent.grid(row=0, column=1, sticky=(W,E))
-        top.comboIndent.state(['readonly'])
+        self.comboIndent.grid(row=0, column=1, sticky=(W,E))
+        self.comboIndent.state(['readonly'])
 
         self.indentLastBrace = BooleanVar()
-        top.checkIndentLastBrace = ttk.Checkbutton(top.mainframe, text="Indent rules's last brace",
+        self.checkIndentLastBrace = ttk.Checkbutton(self.mainframe, text="Indent rules's last brace",
                                                    variable=self.indentLastBrace,
                                                    onvalue=True, offvalue=False)
-        top.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=W)
+        self.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=W)
 
         self.keepEmptyRules = BooleanVar()
-        top.checkKeepEmptyRules = ttk.Checkbutton(top.mainframe, text="Keep empty rules (e.g. "+\
+        self.checkKeepEmptyRules = ttk.Checkbutton(self.mainframe, text="Keep empty rules (e.g. "+\
                                                   "\"p { }\")", variable=self.keepEmptyRules,
                                                   onvalue=True, offvalue=False)
-        top.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=W)
+        self.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=W)
 
         self.omitSemicolon = BooleanVar()
-        top.checkOmitSemicolon = ttk.Checkbutton(top.mainframe, text="Omit semicolon after rules's "+\
+        self.checkOmitSemicolon = ttk.Checkbutton(self.mainframe, text="Omit semicolon after rules's "+\
                                                  "last declaration (e.g. \"p { font-size: 1.2em; "+\
                                                  "text-indent: .5em }\")", variable=self.omitSemicolon,
                                                  onvalue=True, offvalue=False)
-        top.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=W)
+        self.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=W)
 
         self.omitLeadingZero = BooleanVar()
-        top.checkOmitZeroes = ttk.Checkbutton(top.mainframe, text="Omit leading zero (e.g. \".5em\" vs \"0.5em\")",
+        self.checkOmitZeroes = ttk.Checkbutton(self.mainframe, text="Omit leading zero (e.g. \".5em\" vs \"0.5em\")",
                                               variable=self.omitLeadingZero, onvalue=True,
                                               offvalue=False)
-        top.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=W)
+        self.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=W)
 
         self.formatUnknownRules = BooleanVar()
-        top.checkFormatUnknown = ttk.Checkbutton(top.mainframe, text="Use settings to reformat css "+\
+        self.checkFormatUnknown = ttk.Checkbutton(self.mainframe, text="Use settings to reformat css "+\
                                                  "inside not recognized @rules, too (not completely safe)",
                                                  variable=self.formatUnknownRules, onvalue=True,
                                                  offvalue=False)
-        top.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=W)
+        self.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=W)
 
         self.blankLinesAfterRules = BooleanVar()
-        top.checkBlankLinesAfterRules = ttk.Checkbutton(top.mainframe, text="Add a blank line after every rule",
+        self.checkBlankLinesAfterRules = ttk.Checkbutton(self.mainframe, text="Add a blank line after every rule",
                                                         variable=self.blankLinesAfterRules, onvalue=True,
                                                         offvalue=False)
-        top.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=W)
+        self.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=W)
 
-        self.get_initial_values(top)
+        self.get_initial_values()
 
-        cont_button = ttk.Button(top.mainframe, text='Save and continue',
-                   command=lambda: self.save_and_go(top, bk))
+        cont_button = ttk.Button(self.mainframe, text='Save and continue',
+                   command=lambda: self.save_and_go(bk))
         cont_button.grid(row=7, column=3, sticky=E)
-        canc_button = ttk.Button(top.mainframe, text='Cancel',
-                   command=top.destroy)
+        canc_button = ttk.Button(self.mainframe, text='Cancel',
+                   command=self.destroy)
         canc_button.grid(row=7, column=4, sticky=(W,E))
-        cont_button.bind('<Return>', lambda event: self.save_and_go(top, bk))
-        canc_button.bind('<Return>', lambda event: top.destroy())
+        cont_button.bind('<Return>', lambda event: self.save_and_go(bk))
+        canc_button.bind('<Return>', lambda event: self.destroy())
 
-        top.mainframe.columnconfigure(0, weight=0)
-        top.mainframe.columnconfigure(1, weight=0)
-        top.mainframe.columnconfigure(2, weight=1)
-        top.mainframe.columnconfigure(3, weight=0)
-        top.mainframe.columnconfigure(4, weight=0)
+        self.mainframe.columnconfigure(0, weight=0)
+        self.mainframe.columnconfigure(1, weight=0)
+        self.mainframe.columnconfigure(2, weight=1)
+        self.mainframe.columnconfigure(3, weight=0)
+        self.mainframe.columnconfigure(4, weight=0)
         cont_button.focus_set()
         
-        top.grab_set()
+        self.grab_set()
 
-    def get_initial_values(self, top):
+    def get_initial_values(self):
         if self.prefs['indent'] == "\t":
-            top.comboIndent.set('1 tab')
+            self.comboIndent.set('1 tab')
         else:
-            top.comboIndent.current(newindex=len(self.prefs['indent']))
+            self.comboIndent.current(newindex=len(self.prefs['indent']))
         if self.prefs['indentClosingBrace']:
             self.indentLastBrace.set(1)
         else:
@@ -156,11 +157,11 @@ class PrefsDialog(object):
         else:
             self.blankLinesAfterRules.set(0)
 
-    def save_and_go(self, top, bk):
+    def save_and_go(self, bk):
         if self.indent.get() == '1 tab':
             self.prefs['indent'] = '\t'
         else:
-            self.prefs['indent'] = top.comboIndent.current() * ' '
+            self.prefs['indent'] = self.comboIndent.current() * ' '
         self.prefs['indentClosingBrace'] = True \
                 if self.indentLastBrace.get() == 1 \
                 else False
@@ -180,7 +181,7 @@ class PrefsDialog(object):
                 if self.blankLinesAfterRules.get() == 1 \
                 else 0 * '\n'
         set_css_output_prefs(bk, self.prefs)
-        top.destroy()
+        self.destroy()
 
 
 class InfoDialog(Tk):
