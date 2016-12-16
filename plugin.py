@@ -21,6 +21,7 @@
 from collections import OrderedDict
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox as msgbox
 import sys
 import re
 
@@ -385,6 +386,15 @@ class SelectorsDialog(Tk):
                         wraplength=event.width-(50+self.scrollList.winfo_reqwidth()))
 
 
+class ErrorDlg(Tk):
+
+    def __init__(self, filename):
+        super().__init__()
+        self.withdraw()
+        msgbox.showerror('Error while parsing {}'.format(filename), sys.exc_info()[1])
+        self.destroy()
+
+
 # Sigil 0.9.7 broke compatibility in reading css and js files.
 def read_css(bk, css):
     try:
@@ -616,11 +626,16 @@ def run(bk):
                                            selector_ns, namespaces_dict, is_xhtml):
                             maintain_selector = True
                             break
-                        if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
-                                                     xml_parser),
-                                           selector_ns, namespaces_dict, is_xhtml):
-                            maintain_selector = True
-                            break
+                        try:
+                            if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
+                                                         xml_parser),
+                                               selector_ns, namespaces_dict, is_xhtml):
+                                maintain_selector = True
+                                break
+                        except etree.XMLSyntaxError:
+                            form = ErrorDlg(href_to_basename(href))
+                            form.mainloop()
+                            return 1
                     if not maintain_selector:
                         orphaned_selectors.append((css_id, rule,
                                                    rule.selectorList[selector_index],
