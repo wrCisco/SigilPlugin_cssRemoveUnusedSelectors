@@ -116,7 +116,9 @@ class PrefsDialog(Toplevel):
                    command=self.destroy)
         canc_button.grid(row=7, column=4, sticky=(W,E))
         cont_button.bind('<Return>', lambda event: self.save_and_go(bk))
+        cont_button.bind('<KP_Enter>', lambda event: self.save_and_go(bk))
         canc_button.bind('<Return>', lambda event: self.destroy())
+        canc_button.bind('<KP_Enter>', lambda event: self.destroy())
 
         self.mainframe.columnconfigure(0, weight=0)
         self.mainframe.columnconfigure(1, weight=0)
@@ -227,8 +229,11 @@ class InfoDialog(Tk):
         canc_button = ttk.Button(self.mainframe, text='Cancel', command=self.quit)
         canc_button.grid(row=2, column=3, sticky=(W,E))
         pref_button.bind('<Return>', lambda event: self.prefs_dlg(bk, prefs))
+        pref_button.bind('<KP_Enter>', lambda event: self.prefs_dlg(bk, prefs))
         cont_button.bind('<Return>', lambda event: self.proceed(bk, prefs))
+        cont_button.bind('<KP_Enter>', lambda event: self.proceed(bk, prefs))
         canc_button.bind('<Return>', lambda event: self.quit())
+        canc_button.bind('<KP_Enter>', lambda event: self.quit())
 
         self.mainframe.columnconfigure(0, weight=0)
         self.mainframe.columnconfigure(1, weight=1)
@@ -359,7 +364,9 @@ class SelectorsDialog(Tk):
                                  command=self.quit)
         canc_button.grid(row=0, column=2, sticky=(W,E))
         cont_button.bind('<Return>', lambda event: self.proceed())
+        cont_button.bind('<KP_Enter>', lambda event: self.proceed())
         canc_button.bind('<Return>', lambda event: self.quit())
+        canc_button.bind('<KP_Enter>', lambda event: self.quit())
 
         self.mainframe.columnconfigure(0, weight=1)
         self.mainframe.rowconfigure(0, weight=1)
