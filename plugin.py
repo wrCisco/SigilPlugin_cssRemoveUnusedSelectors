@@ -307,15 +307,16 @@ class SelectorsDialog(Tk):
         self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
         self.mainframe.bind('<Configure>',
                             lambda event: self.update_wraplength(event, style))
-        self.upperframe = ttk.Frame(self.mainframe, padding="0 0 0 4")
+        self.upperframe = ttk.Frame(self.mainframe, padding="0", relief=SUNKEN, borderwidth=1)
         self.upperframe.grid(column=0, row=0, sticky=(N,W,E,S))
-        self.lowerframe = ttk.Frame(self.mainframe, padding="4 0 0 0")
+        self.lowerframe = ttk.Frame(self.mainframe, padding="0 8 0 0")
         self.lowerframe.grid(column=0, row=1, sticky=(N,W,E,S))
 
         if orphaned_selectors:
             self.geometry('360x420+100+100')
             self.scrollList = ttk.Scrollbar(self.upperframe, orient=VERTICAL)
-            self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set) # width=40, height=20,
+            self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set,
+                             borderwidth=0, pady=0) # width=40, height=20,
             self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
             self.scrollList['command'] = self.text.yview
             self.text.grid(row=0, column=0, columnspan=3, sticky=(N,S,W,E))
@@ -325,7 +326,7 @@ class SelectorsDialog(Tk):
             self.toggleAll = BooleanVar()
             self.toggleAllStr = StringVar()
             self.toggleAllStr.set('Unselect all')
-            self.checkToggleAll = ttk.Checkbutton(self.upperframe,
+            self.checkToggleAll = ttk.Checkbutton(self.text,
                                                   textvariable=self.toggleAllStr,
                                                   variable=self.toggleAll,
                                                   onvalue=True, offvalue=False,
@@ -340,7 +341,7 @@ class SelectorsDialog(Tk):
                 sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
                 orphaned[selector_key] = [selector_tuple, BooleanVar()]
-                sel_checkbutton = ttk.Checkbutton(self.upperframe,
+                sel_checkbutton = ttk.Checkbutton(self.text,
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
                                                   onvalue=True, offvalue=False)
