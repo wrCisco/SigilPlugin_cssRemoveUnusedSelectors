@@ -18,10 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from collections import OrderedDict
-from tkinter import *
+
+import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox as msgbox
+from collections import OrderedDict
 import sys
 import re
 
@@ -40,7 +41,7 @@ NEVER_MATCH = (":hover",
                ":visited")
 
 
-class PrefsDialog(Toplevel):
+class PrefsDialog(tk.Toplevel):
     """
     Dialog to set and save preferences about css formatting.
     """
@@ -53,68 +54,68 @@ class PrefsDialog(Toplevel):
         super().__init__(parent)
         self.transient(parent)
         self.title("Preferences")
-        self.resizable(width=TRUE, height=TRUE)
+        self.resizable(width=tk.TRUE, height=tk.TRUE)
         self.geometry('+100+100')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.mainframe.grid(column=0, row=0, sticky="nwes")
 
-        self.indent = StringVar()
+        self.indent = tk.StringVar()
         self.labelIndent = ttk.Label(self.mainframe, text="Indent:")
-        self.labelIndent.grid(row=0, column=0, sticky=(W,E))
+        self.labelIndent.grid(row=0, column=0, sticky="we")
         self.comboIndent = ttk.Combobox(self.mainframe, textvariable=self.indent,
                                        values=('No indentation', '1 space', '2 spaces',
                                                '3 spaces', '4 spaces', '1 tab'))
-        self.comboIndent.grid(row=0, column=1, sticky=(W,E))
+        self.comboIndent.grid(row=0, column=1, sticky="we")
         self.comboIndent.state(['readonly'])
 
-        self.indentLastBrace = BooleanVar()
+        self.indentLastBrace = tk.BooleanVar()
         self.checkIndentLastBrace = ttk.Checkbutton(self.mainframe, text="Indent rules's last brace",
                                                    variable=self.indentLastBrace,
                                                    onvalue=True, offvalue=False)
-        self.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=W)
+        self.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=tk.W)
 
-        self.keepEmptyRules = BooleanVar()
+        self.keepEmptyRules = tk.BooleanVar()
         self.checkKeepEmptyRules = ttk.Checkbutton(self.mainframe, text="Keep empty rules (e.g. "+\
                                                   "\"p { }\")", variable=self.keepEmptyRules,
                                                   onvalue=True, offvalue=False)
-        self.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=W)
+        self.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=tk.W)
 
-        self.omitSemicolon = BooleanVar()
+        self.omitSemicolon = tk.BooleanVar()
         self.checkOmitSemicolon = ttk.Checkbutton(self.mainframe, text="Omit semicolon after rules's "+\
                                                  "last declaration (e.g. \"p { font-size: 1.2em; "+\
                                                  "text-indent: .5em }\")", variable=self.omitSemicolon,
                                                  onvalue=True, offvalue=False)
-        self.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=W)
+        self.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=tk.W)
 
-        self.omitLeadingZero = BooleanVar()
+        self.omitLeadingZero = tk.BooleanVar()
         self.checkOmitZeroes = ttk.Checkbutton(self.mainframe, text="Omit leading zero (e.g. \".5em\" vs \"0.5em\")",
                                               variable=self.omitLeadingZero, onvalue=True,
                                               offvalue=False)
-        self.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=W)
+        self.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=tk.W)
 
-        self.formatUnknownRules = BooleanVar()
+        self.formatUnknownRules = tk.BooleanVar()
         self.checkFormatUnknown = ttk.Checkbutton(self.mainframe, text="Use settings to reformat css "+\
                                                  "inside not recognized @rules, too (not completely safe)",
                                                  variable=self.formatUnknownRules, onvalue=True,
                                                  offvalue=False)
-        self.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=W)
+        self.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=tk.W)
 
-        self.blankLinesAfterRules = BooleanVar()
+        self.blankLinesAfterRules = tk.BooleanVar()
         self.checkBlankLinesAfterRules = ttk.Checkbutton(self.mainframe, text="Add a blank line after every rule",
                                                         variable=self.blankLinesAfterRules, onvalue=True,
                                                         offvalue=False)
-        self.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=W)
+        self.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=tk.W)
 
         self.get_initial_values()
 
         cont_button = ttk.Button(self.mainframe, text='Save and continue',
                    command=lambda: self.save_and_go(bk))
-        cont_button.grid(row=7, column=3, sticky=E)
+        cont_button.grid(row=7, column=3, sticky=tk.E)
         canc_button = ttk.Button(self.mainframe, text='Cancel',
                    command=self.destroy)
-        canc_button.grid(row=7, column=4, sticky=(W,E))
+        canc_button.grid(row=7, column=4, sticky="we")
         cont_button.bind('<Return>', lambda event: self.save_and_go(bk))
         cont_button.bind('<KP_Enter>', lambda event: self.save_and_go(bk))
         canc_button.bind('<Return>', lambda event: self.destroy())
@@ -186,7 +187,7 @@ class PrefsDialog(Toplevel):
         self.destroy()
 
 
-class InfoDialog(Tk):
+class InfoDialog(tk.Tk):
     """
     Dialog to show errors on css parsing and let the user decide if she
     wants to continue or stop the plugin.
@@ -199,35 +200,35 @@ class InfoDialog(Tk):
         style = ttk.Style()
         style.configure('myCheckbutton.TCheckbutton', padding="0 0 0 5")
         self.title('Preparing to parse...')
-        self.resizable(width=TRUE, height=TRUE)
+        self.resizable(width=tk.TRUE, height=tk.TRUE)
         self.geometry('+100+100')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12")  # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.mainframe.grid(column=0, row=0, sticky="nwes")
 
-        self.msg = StringVar()
+        self.msg = tk.StringVar()
         self.labelInfo = ttk.Label(self.mainframe,
                                    textvariable=self.msg, wraplength=600)
-        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky=(W,E), pady=5)
+        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky="we", pady=5)
 
-        self.parseAllXMLFiles = BooleanVar()
+        self.parseAllXMLFiles = tk.BooleanVar()
         self.checkParseAllXMLFiles = ttk.Checkbutton(self.mainframe,
                                                      text='Parse every xml file, not only xhtml.',
                                                      variable=self.parseAllXMLFiles,
                                                      onvalue=True,
                                                      offvalue=False,
                                                      style="myCheckbutton.TCheckbutton")
-        self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky=(W,E))
+        self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky="we")
         
         pref_button = ttk.Button(self.mainframe, text='Set preferences',
                                  command=lambda: self.prefs_dlg(bk, prefs))
-        pref_button.grid(row=2, column=0, sticky=(W,E))
+        pref_button.grid(row=2, column=0, sticky="we")
         cont_button = ttk.Button(self.mainframe, text='Continue',
                                  command=lambda: self.proceed(bk, prefs))
-        cont_button.grid(row=2, column=2, sticky=(W,E))
+        cont_button.grid(row=2, column=2, sticky="we")
         canc_button = ttk.Button(self.mainframe, text='Cancel', command=self.quit)
-        canc_button.grid(row=2, column=3, sticky=(W,E))
+        canc_button.grid(row=2, column=3, sticky="we")
         pref_button.bind('<Return>', lambda event: self.prefs_dlg(bk, prefs))
         pref_button.bind('<KP_Enter>', lambda event: self.prefs_dlg(bk, prefs))
         cont_button.bind('<Return>', lambda event: self.proceed(bk, prefs))
@@ -285,7 +286,7 @@ class InfoDialog(Tk):
         self.destroy()
 
 
-class SelectorsDialog(Tk):
+class SelectorsDialog(tk.Tk):
     """
     Dialog to show the list of css "orphaned" selectors (those without
     corresponding tags in xhtml files) and let the user choose the ones
@@ -300,31 +301,31 @@ class SelectorsDialog(Tk):
         style = ttk.Style()
         style.configure('TCheckbutton', background='white', wraplength=290)
         self.title('Remove unused Selectors')
-        self.resizable(width=TRUE, height=TRUE)
+        self.resizable(width=tk.TRUE, height=tk.TRUE)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.mainframe.grid(column=0, row=0, sticky="nsew")
         self.mainframe.bind('<Configure>',
                             lambda event: self.update_wraplength(event, style))
-        self.upperframe = ttk.Frame(self.mainframe, padding="0", relief=SUNKEN, borderwidth=1)
-        self.upperframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.upperframe = ttk.Frame(self.mainframe, padding="0", relief=tk.SUNKEN, borderwidth=1)
+        self.upperframe.grid(column=0, row=0, sticky="nsew")
         self.lowerframe = ttk.Frame(self.mainframe, padding="0 8 0 0")
-        self.lowerframe.grid(column=0, row=1, sticky=(N,W,E,S))
+        self.lowerframe.grid(column=0, row=1, sticky="nsew")
 
         if orphaned_selectors:
             self.geometry('360x420+100+100')
-            self.scrollList = ttk.Scrollbar(self.upperframe, orient=VERTICAL)
-            self.text = Text(self.upperframe, yscrollcommand=self.scrollList.set,
+            self.scrollList = ttk.Scrollbar(self.upperframe, orient=tk.VERTICAL)
+            self.text = tk.Text(self.upperframe, yscrollcommand=self.scrollList.set,
                              borderwidth=0, pady=0) # width=40, height=20,
-            self.scrollList.grid(row=0, column=3, sticky=(N,E,S,W))
+            self.scrollList.grid(row=0, column=3, sticky="nsew")
             self.scrollList['command'] = self.text.yview
-            self.text.grid(row=0, column=0, columnspan=3, sticky=(N,S,W,E))
+            self.text.grid(row=0, column=0, columnspan=3, sticky="nsew")
 
             orphaned = SelectorsDialog.orphaned_dict
 
-            self.toggleAll = BooleanVar()
-            self.toggleAllStr = StringVar()
+            self.toggleAll = tk.BooleanVar()
+            self.toggleAllStr = tk.StringVar()
             self.toggleAllStr.set('Unselect all')
             self.checkToggleAll = ttk.Checkbutton(self.text,
                                                   textvariable=self.toggleAllStr,
@@ -340,7 +341,7 @@ class SelectorsDialog(Tk):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
                 sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
-                orphaned[selector_key] = [selector_tuple, BooleanVar()]
+                orphaned[selector_key] = [selector_tuple, tk.BooleanVar()]
                 sel_checkbutton = ttk.Checkbutton(self.text,
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
@@ -349,21 +350,21 @@ class SelectorsDialog(Tk):
                 self.text.insert('end', '\n')
                 orphaned[selector_key][1].set(True)
                 self.toggle_selectors_list.append(orphaned[selector_key][1])
-            self.text.config(state=DISABLED)
+            self.text.config(state=tk.DISABLED)
         else:
             self.geometry('+100+100')
             self.labelInfo = ttk.Label(self.upperframe,
                                        text="I didn't find any unused selector.")
-            self.labelInfo.grid(row=0, column=0, sticky=(W,E), pady=5)
+            self.labelInfo.grid(row=0, column=0, sticky="we", pady=5)
 
         cont_button = ttk.Button(self.lowerframe,
                                  text='Continue',
                                  command=self.proceed)
-        cont_button.grid(row=0, column=1, sticky=(W,E))
+        cont_button.grid(row=0, column=1, sticky="we")
         canc_button = ttk.Button(self.lowerframe,
                                  text='Cancel',
                                  command=self.quit)
-        canc_button.grid(row=0, column=2, sticky=(W,E))
+        canc_button.grid(row=0, column=2, sticky="we")
         cont_button.bind('<Return>', lambda event: self.proceed())
         cont_button.bind('<KP_Enter>', lambda event: self.proceed())
         canc_button.bind('<Return>', lambda event: self.quit())
@@ -396,7 +397,7 @@ class SelectorsDialog(Tk):
                         wraplength=event.width-(50+self.scrollList.winfo_reqwidth()))
 
 
-class ErrorDlg(Tk):
+class ErrorDlg(tk.Tk):
 
     def __init__(self, filename):
         super().__init__()
