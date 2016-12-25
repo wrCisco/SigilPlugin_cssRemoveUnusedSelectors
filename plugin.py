@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox as msgbox
@@ -30,7 +29,7 @@ from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 import cssutils
 
-import customCssutils
+import customcssutils
 
 
 # As from https://pythonhosted.org/cssselect/#supported-selectors
@@ -592,7 +591,7 @@ def href_to_basename(href, ow=None):
 
 
 def run(bk):
-    cssutils.setSerializer(customCssutils.MyCSSSerializer())
+    cssutils.setSerializer(customcssutils.MyCSSSerializer())
     prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
