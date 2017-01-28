@@ -320,6 +320,7 @@ class SelectorsDialog(tk.Tk):
             self.scrollList.grid(row=0, column=3, sticky="nsew")
             self.scrollList['command'] = self.text.yview
             self.text.grid(row=0, column=0, columnspan=3, sticky="nsew")
+            self.bind_to_mousewheel(self.text)
 
             orphaned = SelectorsDialog.orphaned_dict
 
@@ -331,6 +332,7 @@ class SelectorsDialog(tk.Tk):
                                                   variable=self.toggleAll,
                                                   onvalue=True, offvalue=False,
                                                   command=self.toggle_all)
+            self.add_bindtag(self.checkToggleAll, self.text)
             self.text.window_create('end', window=self.checkToggleAll)
             self.text.insert('end', '\n\n')
             self.toggleAll.set(True)
@@ -345,6 +347,7 @@ class SelectorsDialog(tk.Tk):
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
                                                   onvalue=True, offvalue=False)
+                self.add_bindtag(sel_checkbutton, self.text)
                 self.text.window_create('end', window=sel_checkbutton)
                 self.text.insert('end', '\n')
                 orphaned[selector_key][1].set(True)
@@ -394,6 +397,25 @@ class SelectorsDialog(tk.Tk):
     def update_wraplength(self, event, style):
         style.configure('TCheckbutton',
                         wraplength=event.width-(50+self.scrollList.winfo_reqwidth()))
+
+    def add_bindtag(self, widget, other):
+        bindtags = list(widget.bindtags())
+        bindtags.insert(1, self.winfo_pathname(other.winfo_id()))
+        widget.bindtags(tuple(bindtags))
+
+    def bind_to_mousewheel(self, widget):
+        if sys.platform.startswith("linux"):
+            widget.bind("<4>", lambda event: self.scroll_on_mousewheel(event, widget))
+            widget.bind("<5>", lambda event: self.scroll_on_mousewheel(event, widget))
+        else:
+            widget.bind("<MouseWheel>", lambda event: self.scroll_on_mousewheel(event, widget))
+
+    def scroll_on_mousewheel(self, event, widget):
+        if event.num == 5 or event.delta < 0:
+            move = 1
+        else:
+            move = -1
+        widget.yview_scroll(move, tk.UNITS)
 
 
 class ErrorDlg(tk.Tk):
