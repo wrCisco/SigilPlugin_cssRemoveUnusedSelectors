@@ -331,7 +331,8 @@ class SelectorsDialog(tk.Tk):
                                                   textvariable=self.toggleAllStr,
                                                   variable=self.toggleAll,
                                                   onvalue=True, offvalue=False,
-                                                  command=self.toggle_all)
+                                                  command=self.toggle_all,
+                                                  cursor="arrow")
             self.add_bindtag(self.checkToggleAll, self.text)
             self.text.window_create('end', window=self.checkToggleAll)
             self.text.insert('end', '\n\n')
@@ -346,7 +347,8 @@ class SelectorsDialog(tk.Tk):
                 sel_checkbutton = ttk.Checkbutton(self.text,
                                                   text=sel_and_css,
                                                   variable=orphaned[selector_key][1],
-                                                  onvalue=True, offvalue=False)
+                                                  onvalue=True, offvalue=False,
+                                                  cursor="arrow")
                 self.add_bindtag(sel_checkbutton, self.text)
                 self.text.window_create('end', window=sel_checkbutton)
                 self.text.insert('end', '\n')
