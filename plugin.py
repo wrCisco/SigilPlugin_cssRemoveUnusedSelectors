@@ -514,7 +514,7 @@ def add_default_prefix(prefix, selector_text):
     # https://www.w3.org/TR/css-syntax-3/#input-preprocessing
     # states that \r, \f and \r\n  must be replaced by \n
     # before tokenization.
-    for token in re.split(r'(?<!\\)([ \n\t])', selector_text):
+    for token in re.split(r'(?<!\\)([ \n\t]*:not\(|[ \n\t]+)', selector_text):
         if (re.match(r'-?(?:[A-Za-z_]|\\[^\n]|[^\u0000-\u007F])', token)
                 and not re.search(r'(?<!\\)\|', token)):
             selector_ns += '{}|{}'.format(prefix, token)
