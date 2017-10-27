@@ -23,7 +23,7 @@ from tkinter import ttk
 from tkinter import messagebox as msgbox
 from collections import OrderedDict
 import sys
-import re
+import regex as re
 
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
@@ -508,13 +508,14 @@ def add_default_prefix(prefix, selector_text):
     in selector_text. Returns prefixed selector.
     """
     # Note: regex here are valid thanks to cssutils's normalization
-    # of selectors text (e.g. optional whitespace after escape sequences
-    # is removed).
+    # of selectors text (e.g. spaces around combinators are always added,
+    # sequences of whitespace characters are always reduced to one U+0020).
     selector_ns = ''
     # https://www.w3.org/TR/css-syntax-3/#input-preprocessing
     # states that \r, \f and \r\n  must be replaced by \n
     # before tokenization.
-    for token in re.split(r'(?<!\\)([ \n\t]*:not\(|[ \n\t]+)', selector_text):
+    for token in re.split(r'(?<!\\(?:[a-fA-F0-9]{1,6})?)([ \n\t]:not\(|[ \n\t])',
+                          selector_text):
         if (re.match(r'-?(?:[A-Za-z_]|\\[^\n]|[^\u0000-\u007F])', token)
                 and not re.search(r'(?<!\\)\|', token)):
             selector_ns += '{}|{}'.format(prefix, token)
