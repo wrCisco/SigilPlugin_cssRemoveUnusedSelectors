@@ -15,7 +15,7 @@ class TestPlugin(unittest.TestCase):
     def setUp(self):
         cssutils.setSerializer(customcssutils.MyCSSSerializer())
         self.css = cssutils.parseFile(os.path.join(os.path.dirname(__file__),
-                                                   'docs', 'base.css'))
+                                                   'resources', 'base.css'))
 
     def test_css_namespaces(self):
         self.assertEqual(p.css_namespaces(self.css), ({}, ''))
