@@ -27,6 +27,15 @@ class TestPlugin(unittest.TestCase):
                          ({'svg': 'https://www.w3.org/2000/svg',
                            'a': 'https://www.w3.org/1999/xhtml'}, 'a'))
 
+    def test_ignore_selectors(self):
+        for pseudo_class in p.NEVER_MATCH:
+            self.css.insertRule('{} {{}}'.format(pseudo_class))
+        for i in range(0, len(self.css.cssRules) - len(p.NEVER_MATCH)):
+            self.css.deleteRule(0)
+        for rule in self.css:
+            with self.subTest(rule=rule):
+                self.assertTrue(p.ignore_selectors(rule.selectorText))
+
     def test_add_default_prefix(self):
         # Some selectors directly given to the tested function
         self.assertEqual(p.add_default_prefix('aa', 'p.ex1 > strong.ex2'),
@@ -50,11 +59,7 @@ class TestPlugin(unittest.TestCase):
                          '.ex1:nth-child(2n+1) > svg|text.\ startingSpace :not(aa|p) '
                          '.\:notANotSelector\(.“quoted”')
 
-    def test_ignore_selectors(self):
-        for pseudo_class in p.NEVER_MATCH:
-            self.css.insertRule('{} {{}}'.format(pseudo_class))
-        for i in range(0, len(self.css.cssRules) - len(p.NEVER_MATCH)):
-            self.css.deleteRule(0)
-        for rule in self.css:
-            with self.subTest(rule=rule):
-                self.assertTrue(p.ignore_selectors(rule.selectorText))
+    def test_clean_generic_prefixes(self):
+        self.assertEqual(p.clean_generic_prefixes('|div svg|a'), 'div svg|a')
+        self.assertEqual(p.clean_generic_prefixes('*|text xhtml|p'), 'text p')
+        self.assertEqual(p.clean_generic_prefixes('html|canvas svg|text'), 'html|canvas svg|text')
