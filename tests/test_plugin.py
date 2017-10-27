@@ -24,3 +24,10 @@ class TestPlugin(unittest.TestCase):
         self.assertEqual(p.css_namespaces(self.css),
                          ({'svg': 'https://www.w3.org/2000/svg',
                            'a': 'https://www.w3.org/1999/xhtml'}, 'a'))
+
+    def test_add_default_prefix(self):
+        self.css.namespaces['aa'] = 'https://www.w3.org/1999/xhtml'
+        self.assertEqual(p.add_default_prefix('aa', 'p.ex1 + p.ex2'),
+                         'aa|p.ex1 + aa|p.ex2')
+        self.assertEqual(p.add_default_prefix('aa', '.ex1:nth-child(2n+1) > svg|h2  :not(p) .\:not'),
+                         '.ex1:nth-child(2n+1) > svg|h2  :not(aa|p) .\:not')
