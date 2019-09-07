@@ -33,8 +33,8 @@ class MyCSSSerializer(cssutils.CSSSerializer):
 
     def __init__(self):
         super().__init__()
-        self.prefs.blankLinesAfterRules = 0 * '\n'
-        self.prefs.formatUnknownRules = False
+        self.prefs.linesAfterRules = 0 * '\n'
+        self.prefs.formatUnknownAtRules = False
 
     def do_CSSStyleSheet(self, stylesheet):
         """serializes a complete CSSStyleSheet"""
@@ -49,7 +49,7 @@ class MyCSSSerializer(cssutils.CSSSerializer):
 
             cssText = rule.cssText
             if cssText:
-                out.append(cssText+self.prefs.blankLinesAfterRules)
+                out.append(cssText+self.prefs.linesAfterRules)
         text = self._linenumnbers(self.prefs.lineSeparator.join(out))
 
         # get encoding of sheet, defaults to UTF-8
@@ -139,7 +139,7 @@ class MyCSSSerializer(cssutils.CSSSerializer):
             return ''
 
     def do_CSSUnknownRule(self, rule):
-        if not self.prefs.formatUnknownRules:
+        if not self.prefs.formatUnknownAtRules:
             if rule.wellformed and self.prefs.keepUnknownAtRules:
                 return rule.atkeyword + ''.join(x.value for x in rule.seq)
             else:

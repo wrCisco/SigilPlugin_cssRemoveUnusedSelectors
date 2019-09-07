@@ -94,18 +94,18 @@ class PrefsDialog(tk.Toplevel):
                                               offvalue=False)
         self.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=tk.W)
 
-        self.formatUnknownRules = tk.BooleanVar()
+        self.formatUnknownAtRules = tk.BooleanVar()
         self.checkFormatUnknown = ttk.Checkbutton(self.mainframe, text="Use settings to reformat css "+\
                                                  "inside not recognized @rules, too (not completely safe)",
-                                                 variable=self.formatUnknownRules, onvalue=True,
+                                                 variable=self.formatUnknownAtRules, onvalue=True,
                                                  offvalue=False)
         self.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=tk.W)
 
-        self.blankLinesAfterRules = tk.BooleanVar()
-        self.checkBlankLinesAfterRules = ttk.Checkbutton(self.mainframe, text="Add a blank line after every rule",
-                                                        variable=self.blankLinesAfterRules, onvalue=True,
+        self.linesAfterRules = tk.BooleanVar()
+        self.checkLinesAfterRules = ttk.Checkbutton(self.mainframe, text="Add a blank line after every rule",
+                                                        variable=self.linesAfterRules, onvalue=True,
                                                         offvalue=False)
-        self.checkBlankLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=tk.W)
+        self.checkLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=tk.W)
 
         self.get_initial_values()
 
@@ -150,14 +150,14 @@ class PrefsDialog(tk.Toplevel):
             self.omitLeadingZero.set(1)
         else:
             self.omitLeadingZero.set(0)
-        if self.prefs['formatUnknownRules']:
-            self.formatUnknownRules.set(1)
+        if self.prefs['formatUnknownAtRules']:
+            self.formatUnknownAtRules.set(1)
         else:
-            self.formatUnknownRules.set(0)
-        if self.prefs['blankLinesAfterRules']:
-            self.blankLinesAfterRules.set(1)
+            self.formatUnknownAtRules.set(0)
+        if self.prefs['linesAfterRules']:
+            self.linesAfterRules.set(1)
         else:
-            self.blankLinesAfterRules.set(0)
+            self.linesAfterRules.set(0)
 
     def save_and_go(self, bk):
         if self.indent.get() == '1 tab':
@@ -176,11 +176,11 @@ class PrefsDialog(tk.Toplevel):
         self.prefs['omitLeadingZero'] = True \
                 if self.omitLeadingZero.get() == 1 \
                 else False
-        self.prefs['formatUnknownRules'] = True \
-                if self.formatUnknownRules.get() == 1 \
+        self.prefs['formatUnknownAtRules'] = True \
+                if self.formatUnknownAtRules.get() == 1 \
                 else False
-        self.prefs['blankLinesAfterRules'] = 1 * '\n' \
-                if self.blankLinesAfterRules.get() == 1 \
+        self.prefs['linesAfterRules'] = 1 * '\n' \
+                if self.linesAfterRules.get() == 1 \
                 else 0 * '\n'
         set_css_output_prefs(bk, self.prefs)
         self.destroy()
@@ -581,8 +581,8 @@ def set_css_output_prefs(bk, prefs, save_on_file=True):
     cssutils.ser.prefs.omitLeadingZero = prefs['omitLeadingZero']
 
     # custom prefs, not in cssutils
-    cssutils.ser.prefs.blankLinesAfterRules = prefs['blankLinesAfterRules']
-    cssutils.ser.prefs.formatUnknownRules = prefs['formatUnknownRules']
+    cssutils.ser.prefs.linesAfterRules = prefs['linesAfterRules']
+    cssutils.ser.prefs.formatUnknownAtRules = prefs['formatUnknownAtRules']
 
     if save_on_file:
         bk.savePrefs(prefs)
@@ -597,8 +597,8 @@ def get_prefs(bk):
     prefs.defaults['keepEmptyRules'] = True
     prefs.defaults['omitLastSemicolon'] = False
     prefs.defaults['omitLeadingZero'] = False
-    prefs.defaults['blankLinesAfterRules'] = 1 * '\n'
-    prefs.defaults['formatUnknownRules'] = False
+    prefs.defaults['linesAfterRules'] = 1 * '\n'
+    prefs.defaults['formatUnknownAtRules'] = False
 
     # Other prefs
     prefs.defaults['parseAllXMLFiles'] = True
@@ -616,6 +616,7 @@ def href_to_basename(href, ow=None):
 
 
 def run(bk):
+    
     cssutils.setSerializer(customcssutils.MyCSSSerializer())
     prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
