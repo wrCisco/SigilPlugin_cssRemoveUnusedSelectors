@@ -402,7 +402,7 @@ class SelectorsDialog(tk.Tk):
 
     def add_bindtag(self, widget, other):
         bindtags = list(widget.bindtags())
-        bindtags.insert(1, self.winfo_pathname(other.winfo_id()))
+        bindtags.insert(1, str(other))  # self.winfo_pathname(other.winfo_id()))
         widget.bindtags(tuple(bindtags))
 
     def bind_to_mousewheel(self, widget):
