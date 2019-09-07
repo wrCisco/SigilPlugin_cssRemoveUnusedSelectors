@@ -616,8 +616,9 @@ def href_to_basename(href, ow=None):
 
 
 def run(bk):
-    
-    cssutils.setSerializer(customcssutils.MyCSSSerializer())
+    # set custom serializer if Sigil version is < 0.9.18 (0.9.18 and higher have the new css-parser module)
+    if bk.launcher_version() < 20190826:
+        cssutils.setSerializer(customcssutils.MyCSSSerializer())
     prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
