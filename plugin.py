@@ -600,6 +600,14 @@ def get_prefs(bk):
     prefs.defaults['linesAfterRules'] = 1 * '\n'
     prefs.defaults['formatUnknownAtRules'] = False
 
+    # Update pref names to make them uniform with new css-parser pref names
+    if prefs.get('blankLinesAfterRules'):
+        prefs['linesAfterRules'] = prefs['blankLinesAfterRules']
+        del prefs['blankLinesAfterRules']
+    if prefs.get('formatUnknownRules'):
+        prefs['formatUnknownAtRules'] = prefs['formatUnknownRules']
+        del prefs['formatUnknownRules']
+
     # Other prefs
     prefs.defaults['parseAllXMLFiles'] = True
 
