@@ -4,7 +4,12 @@
 import unittest
 import os
 
-import cssutils
+try:
+    import css_parser as cssutils
+    new_parser = True
+except ModuleNotFound:
+    import cssutils
+    new_parser = False
 
 import plugin as p
 import customcssutils
@@ -13,7 +18,8 @@ import customcssutils
 class TestPlugin(unittest.TestCase):
 
     def setUp(self):
-        cssutils.setSerializer(customcssutils.MyCSSSerializer())
+        if not new_parser:
+            cssutils.setSerializer(customcssutils.MyCSSSerializer())
         self.css = cssutils.parseFile(os.path.join(os.path.dirname(__file__),
                                                    'resources', 'base.css'))
 
