@@ -182,7 +182,6 @@ class PrefsDialog(tk.Toplevel):
         self.prefs['linesAfterRules'] = 1 * '\n' \
                 if self.linesAfterRules.get() == 1 \
                 else 0 * '\n'
-        set_css_output_prefs(bk, self.prefs)
         self.destroy()
 
 
@@ -263,7 +262,7 @@ class InfoDialog(tk.Tk):
         self.msg.set(par_msg)
 
     def prefs_dlg(self, bk, prefs):
-        self.set_pref = PrefsDialog(self, bk, prefs)
+        PrefsDialog(self, bk, prefs)
 
     def get_initial_values(self, prefs):
         if prefs['parseAllXMLFiles']:
@@ -276,10 +275,7 @@ class InfoDialog(tk.Tk):
             prefs['parseAllXMLFiles'] = True
         else:
             prefs['parseAllXMLFiles'] = False
-        try:
-            self.set_pref
-        except AttributeError:
-            set_css_output_prefs(bk, prefs, False)
+        set_css_output_prefs(bk, prefs)
         bk.savePrefs(prefs)
         InfoDialog.stop_plugin = False
         self.destroy()
