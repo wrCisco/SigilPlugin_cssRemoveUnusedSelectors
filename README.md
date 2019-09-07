@@ -1,7 +1,7 @@
 # sigilPlugin_cssRemoveUnusedSelectors
 Remove unused selectors and rules from stylesheets
 
-This plugin uses [cssutils](https://pypi.python.org/pypi/cssutils) to parse the stylesheets of an epub and [lxml](https://pypi.python.org/pypi/lxml/3.5.0)/[csselect](https://pypi.python.org/pypi/cssselect/0.9.1) to check if css selectors match at least one element in xhtml files of that epub.
+This plugin uses [cssutils](https://pypi.python.org/pypi/cssutils) (up to Sigil 0.9.17) or [css-parser](https://github.com/ebook-utils/css-parser) (starting from Sigil 0.9.18) to parse the stylesheets of an epub and [lxml](https://pypi.org/project/lxml/)/[csselect](https://pypi.org/project/cssselect/) to check if css selectors match at least one element in xhtml files of that epub.
 
 (Cssutils, lxml and cssselect are all bundled in Sigil installers).
 
