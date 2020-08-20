@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-# Copyright (c) 2016 Francesco Martini
+# Copyright (c) 2016, 2019, 2020 Francesco Martini
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,9 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox as msgbox
 from collections import OrderedDict
+import inspect
 import sys
+import os
 import regex as re
 
 from cssselect.xpath import SelectorError
@@ -30,6 +32,9 @@ from lxml import etree, cssselect
 import cssutils
 
 import customcssutils
+
+
+SCRIPT_DIR = os.path.normpath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
 
 
 # As from https://pythonhosted.org/cssselect/#supported-selectors
@@ -200,6 +205,12 @@ class InfoDialog(tk.Tk):
         self.title('Preparing to parse...')
         self.resizable(width=tk.TRUE, height=tk.TRUE)
         self.geometry('+100+100')
+        self.protocol('WM_DELETE_WINDOW', self.destroy)
+        try:
+            icon = tk.PhotoImage(file=os.path.join(SCRIPT_DIR, 'plugin.png'))
+            self.iconphoto(True, icon)
+        except Exception:
+            pass
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12")  # padding values's order: "W N E S"
@@ -297,6 +308,12 @@ class SelectorsDialog(tk.Tk):
         style.configure('TCheckbutton', background='white', wraplength=290)
         self.title('Remove unused Selectors')
         self.resizable(width=tk.TRUE, height=tk.TRUE)
+        self.protocol('WM_DELETE_WINDOW', self.destroy)
+        try:
+            icon = tk.PhotoImage(file=os.path.join(SCRIPT_DIR, 'plugin.png'))
+            self.iconphoto(True, icon)
+        except Exception:
+            pass
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
