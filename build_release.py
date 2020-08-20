@@ -140,7 +140,6 @@ if __name__ == '__main__':
     check_files(project_files)
     release_version = set_version(args.version)
     destination = set_zip_path(args.destination, release_version)
-    dest_dir = os.path.dirname(destination)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         for orig, dest in project_files.items():
             z.write(orig, os.path.join(PROJECT_NAME, dest))
