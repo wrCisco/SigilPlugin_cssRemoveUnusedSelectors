@@ -34,7 +34,8 @@ ICONS_PATH = os.path.join(ROOT_PATH, 'images')
 RELEASES_PATH = os.path.join(ROOT_PATH, 'Releases')
 
 PROJECT_FILES = {
-    os.path.join(SRC_PATH, f): f for f in os.listdir(SRC_PATH) if os.path.isfile(os.path.join(SRC_PATH, f))
+    os.path.join(SRC_PATH, f): f for f in os.listdir(SRC_PATH)
+    if os.path.isfile(os.path.join(SRC_PATH, f)) and not f.startswith('.')
 }
 
 ADD_TO_RELEASE = {
