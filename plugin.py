@@ -653,6 +653,25 @@ def run(bk):
 
     parseAllXMLFiles = prefs['parseAllXMLFiles']
 
+    parsed_markup = {}
+    for file_id, href, mime in bk.manifest_iter():
+        if mime == 'application/xhtml+xml':
+            is_xhtml = True
+        elif parseAllXMLFiles and re.search(r'[/+]xml\b', mime):
+            is_xhtml = False
+        else:
+            continue
+        parsed_markup[file_id] = {
+            'is_xhtml': is_xhtml,
+            'html': etree.HTML(bk.readfile(file_id).encode('utf-8'))
+        }
+        try:
+            parsed_markup[file_id]['xml']: etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
+        except etree.XMLSyntaxError:
+            form = ErrorDlg(href_to_basename(href))
+            form.mainloop()
+            return 1
+
     # Parse files to create the list of "orphaned selectors"
     orphaned_selectors = []
     for css_id, css_href in bk.css_iter():
@@ -673,27 +692,13 @@ def run(bk):
                     else:
                         selector_ns = selector.selectorText
                     selector_ns = clean_generic_prefixes(selector_ns)
-                    for file_id, href, mime in bk.manifest_iter():
-                        if mime == 'application/xhtml+xml':
-                            is_xhtml = True
-                        elif parseAllXMLFiles and re.search(r'[/+]xml\b', mime):
-                            is_xhtml = False
-                        else:
-                            continue
-                        if selector_exists(etree.HTML(bk.readfile(file_id).encode('utf-8')),
-                                           selector_ns, namespaces_dict, is_xhtml):
+                    for file_id, etrees in parsed_markup.items():
+                        if selector_exists(etrees['html'], selector_ns, namespaces_dict, etrees['is_xhtml']):
                             maintain_selector = True
                             break
-                        try:
-                            if selector_exists(etree.XML(bk.readfile(file_id).encode('utf-8'),
-                                                         xml_parser),
-                                               selector_ns, namespaces_dict, is_xhtml):
-                                maintain_selector = True
-                                break
-                        except etree.XMLSyntaxError:
-                            form = ErrorDlg(href_to_basename(href))
-                            form.mainloop()
-                            return 1
+                        if etrees.get('xml') and selector_exists(etrees['xml'], selector_ns, namespaces_dict, etrees['is_xhtml']):
+                            maintain_selector = True
+                            break
                     if not maintain_selector:
                         orphaned_selectors.append((css_id, rule,
                                                    rule.selectorList[selector_index],
