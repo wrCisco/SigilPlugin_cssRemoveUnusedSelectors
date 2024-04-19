@@ -7,7 +7,7 @@ import os
 try:
     import css_parser as cssutils
     new_parser = True
-except ModuleNotFound:
+except ModuleNotFoundError:
     import cssutils
     new_parser = False
 

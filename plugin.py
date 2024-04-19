@@ -29,7 +29,10 @@ import regex as re
 
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
-import cssutils
+try:
+    import css_parser as cssutils
+except ImportError:
+    import cssutils
 
 import customcssutils
 

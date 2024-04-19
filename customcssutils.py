@@ -22,8 +22,12 @@
 # copyright 2005 - 2013 Christof Hoeke
 
 
-from cssutils.stylesheets.mediaquery import MediaQuery
-import cssutils
+try:
+    import css_parser as cssutils
+    from css_parser.stylesheets.mediaquery import MediaQuery
+except ImportError:
+    import cssutils
+    from cssutils.stylesheets.mediaquery import MediaQuery
 
 # Add support for Amazon's proprietary media types
 MediaQuery.MEDIA_TYPES.extend(('amzn-mobi', 'amzn-kf8'))
