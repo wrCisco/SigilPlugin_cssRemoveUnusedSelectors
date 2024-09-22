@@ -655,6 +655,8 @@ def run(bk):
         form.mainloop()
         if InfoDialog.stop_plugin:
             return -1
+    else:
+        set_css_output_prefs(bk, prefs)
 
     parseAllXMLFiles = prefs['parseAllXMLFiles']
 
