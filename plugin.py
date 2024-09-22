@@ -626,6 +626,7 @@ def get_prefs(bk):
 
     # Other prefs
     prefs.defaults['parseAllXMLFiles'] = True
+    prefs.defaults['quiet'] = False
 
     return prefs
 
@@ -648,11 +649,12 @@ def run(bk):
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
     css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, css_parser)
 
-    form = InfoDialog(bk, prefs)
-    form.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
-    form.mainloop()
-    if InfoDialog.stop_plugin:
-        return -1
+    if not prefs['quiet'] or css_to_skip:
+        form = InfoDialog(bk, prefs)
+        form.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
+        form.mainloop()
+        if InfoDialog.stop_plugin:
+            return -1
 
     parseAllXMLFiles = prefs['parseAllXMLFiles']
 
@@ -709,16 +711,20 @@ def run(bk):
                                                    parsed_css))
 
     # Show the list of selectors to the user.
-    form = SelectorsDialog(bk, orphaned_selectors)
-    form.mainloop()
-    if SelectorsDialog.stop_plugin:
-        return -1
+    if not prefs['quiet']:
+        form = SelectorsDialog(bk, orphaned_selectors)
+        form.mainloop()
+        if SelectorsDialog.stop_plugin:
+            return -1
+    else:
+        for i, selector in enumerate(orphaned_selectors):
+            SelectorsDialog.orphaned_dict[i] = [selector, True]
 
     # Delete selectors chosen by the user.
     css_to_change = {}
     old_rule, counter = None, 0
     for sel_data, to_delete in SelectorsDialog.orphaned_dict.values():
-        if to_delete.get() == 1:
+        if to_delete is True or to_delete.get() == 1:
             if sel_data[1] == old_rule:
                 counter += 1
             else:
