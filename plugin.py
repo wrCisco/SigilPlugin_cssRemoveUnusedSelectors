@@ -18,15 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox as msgbox
 from collections import OrderedDict
 import inspect
 import sys
 import os
 import regex as re
 
+from plugin_utils import PluginApplication, QtWidgets, QtCore, Qt
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 try:
@@ -35,12 +33,13 @@ except ImportError:
     import cssutils
 
 import customcssutils
+from wrappingcheckbox import WrappingCheckBox
 
 
 SCRIPT_DIR = os.path.normpath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
+PLUGIN_ICON = os.path.join(SCRIPT_DIR, 'plugin.png')
 
-
-# As from https://pythonhosted.org/cssselect/#supported-selectors
+# As from https://cssselect.readthedocs.io/en/latest/#supported-selectors
 NEVER_MATCH = (":hover",
                ":active",
                ":focus",
@@ -48,213 +47,136 @@ NEVER_MATCH = (":hover",
                ":visited")
 
 
-class PrefsDialog(tk.Toplevel):
+class PrefsDialog(QtWidgets.QDialog):
     """
     Dialog to set and save preferences about css formatting.
     """
-
     def __init__(self, parent=None, bk=None, prefs=None):
         if prefs:
             self.prefs = prefs
         else:
             self.prefs = get_prefs(bk)
         super().__init__(parent)
-        self.transient(parent)
-        self.title("Preferences")
-        self.resizable(width=tk.TRUE, height=tk.TRUE)
-        self.geometry('+100+100')
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=1)
-        self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky="nwes")
+        self.setWindowTitle('Preferences')
 
-        self.indent = tk.StringVar()
-        self.labelIndent = ttk.Label(self.mainframe, text="Indent:")
-        self.labelIndent.grid(row=0, column=0, sticky="we")
-        self.comboIndent = ttk.Combobox(self.mainframe, textvariable=self.indent,
-                                       values=('No indentation', '1 space', '2 spaces',
-                                               '3 spaces', '4 spaces', '1 tab'))
-        self.comboIndent.grid(row=0, column=1, sticky="we")
-        self.comboIndent.state(['readonly'])
-
-        self.indentLastBrace = tk.BooleanVar()
-        self.checkIndentLastBrace = ttk.Checkbutton(self.mainframe, text="Indent rules's last brace",
-                                                   variable=self.indentLastBrace,
-                                                   onvalue=True, offvalue=False)
-        self.checkIndentLastBrace.grid(row=1, column=0, columnspan=5, sticky=tk.W)
-
-        self.keepEmptyRules = tk.BooleanVar()
-        self.checkKeepEmptyRules = ttk.Checkbutton(self.mainframe, text="Keep empty rules (e.g. "+\
-                                                  "\"p { }\")", variable=self.keepEmptyRules,
-                                                  onvalue=True, offvalue=False)
-        self.checkKeepEmptyRules.grid(row=2, column=0, columnspan=5, sticky=tk.W)
-
-        self.omitSemicolon = tk.BooleanVar()
-        self.checkOmitSemicolon = ttk.Checkbutton(self.mainframe, text="Omit semicolon after rules's "+\
-                                                 "last declaration (e.g. \"p { font-size: 1.2em; "+\
-                                                 "text-indent: .5em }\")", variable=self.omitSemicolon,
-                                                 onvalue=True, offvalue=False)
-        self.checkOmitSemicolon.grid(row=3, column=0, columnspan=5, sticky=tk.W)
-
-        self.omitLeadingZero = tk.BooleanVar()
-        self.checkOmitZeroes = ttk.Checkbutton(self.mainframe, text="Omit leading zero (e.g. \".5em\" vs \"0.5em\")",
-                                              variable=self.omitLeadingZero, onvalue=True,
-                                              offvalue=False)
-        self.checkOmitZeroes.grid(row=4, column=0, columnspan=5, sticky=tk.W)
-
-        self.formatUnknownAtRules = tk.BooleanVar()
-        self.checkFormatUnknown = ttk.Checkbutton(self.mainframe, text="Use settings to reformat css "+\
-                                                 "inside not recognized @rules, too (not completely safe)",
-                                                 variable=self.formatUnknownAtRules, onvalue=True,
-                                                 offvalue=False)
-        self.checkFormatUnknown.grid(row=5, column=0, columnspan=5, sticky=tk.W)
-
-        self.linesAfterRules = tk.BooleanVar()
-        self.checkLinesAfterRules = ttk.Checkbutton(self.mainframe, text="Add a blank line after every rule",
-                                                        variable=self.linesAfterRules, onvalue=True,
-                                                        offvalue=False)
-        self.checkLinesAfterRules.grid(row=6, column=0, columnspan=5, sticky=tk.W)
+        self.labelIndent = QtWidgets.QLabel('Indent:')
+        self.indent = QtWidgets.QComboBox()
+        self.indent.addItems(
+            (
+                'No indentation',
+                '1 space',
+                '2 spaces',
+                '3 spaces',
+                '4 spaces',
+                '1 tab',
+            )
+        )
+        p = self.indent.sizePolicy()
+        p.setHorizontalPolicy(QtWidgets.QSizePolicy.MinimumExpanding)
+        self.indent.setSizePolicy(p)
+        indentLayout = QtWidgets.QHBoxLayout()
+        indentLayout.addWidget(self.labelIndent)
+        indentLayout.addWidget(self.indent)
+        self.indentLastBrace = QtWidgets.QCheckBox("Indent rules's last brace")
+        self.keepEmptyRules = QtWidgets.QCheckBox('Keep empty rules (e.g. "p { }")')
+        self.omitLastSemicolon = QtWidgets.QCheckBox(
+            "Omit semicolon after rules's last declaration " +
+            '(e.g. "p { font-size: 1.2em; text-indent: .5em }")'
+        )
+        self.omitLeadingZero = QtWidgets.QCheckBox(
+            'Omit leading zero (e.g. ".5em" vs "0.5em")'
+        )
+        self.formatUnknownAtRules = QtWidgets.QCheckBox(
+            "Use settings to reformat css inside not recognized " +
+            "@rules, too (not completely safe)"
+        )
+        self.linesAfterRules = QtWidgets.QCheckBox("Add a blank line after every rule")
 
         self.get_initial_values()
 
-        cont_button = ttk.Button(self.mainframe, text='Save and continue',
-                   command=lambda: self.save_and_go(bk))
-        cont_button.grid(row=7, column=3, sticky=tk.E)
-        canc_button = ttk.Button(self.mainframe, text='Cancel',
-                   command=self.destroy)
-        canc_button.grid(row=7, column=4, sticky="we")
-        cont_button.bind('<Return>', lambda event: self.save_and_go(bk))
-        cont_button.bind('<KP_Enter>', lambda event: self.save_and_go(bk))
-        canc_button.bind('<Return>', lambda event: self.destroy())
-        canc_button.bind('<KP_Enter>', lambda event: self.destroy())
+        buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Cancel)
+        cont_button = buttonBox.addButton("Save and Continue", QtWidgets.QDialogButtonBox.AcceptRole)
+        buttonBox.accepted.connect(self.save_and_go)
+        buttonBox.rejected.connect(self.reject)
 
-        self.mainframe.columnconfigure(0, weight=0)
-        self.mainframe.columnconfigure(1, weight=0)
-        self.mainframe.columnconfigure(2, weight=1)
-        self.mainframe.columnconfigure(3, weight=0)
-        self.mainframe.columnconfigure(4, weight=0)
-        cont_button.focus_set()
-        
-        self.grab_set()
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addLayout(indentLayout)
+        mainLayout.addWidget(self.indentLastBrace)
+        mainLayout.addWidget(self.keepEmptyRules)
+        mainLayout.addWidget(self.omitLastSemicolon)
+        mainLayout.addWidget(self.omitLeadingZero)
+        mainLayout.addWidget(self.formatUnknownAtRules)
+        mainLayout.addWidget(self.linesAfterRules)
+        mainLayout.addWidget(buttonBox)
+        self.setLayout(mainLayout)
 
     def get_initial_values(self):
         if self.prefs['indent'] == "\t":
-            self.comboIndent.set('1 tab')
+            self.indent.setCurrentText('1 tab')
         else:
-            self.comboIndent.current(newindex=len(self.prefs['indent']))
-        if self.prefs['indentClosingBrace']:
-            self.indentLastBrace.set(1)
-        else:
-            self.indentLastBrace.set(0)
-        if self.prefs['keepEmptyRules']:
-            self.keepEmptyRules.set(1)
-        else:
-            self.keepEmptyRules.set(0)
-        if self.prefs['omitLastSemicolon']:
-            self.omitSemicolon.set(1)
-        else:
-            self.omitSemicolon.set(0)
-        if self.prefs['omitLeadingZero']:
-            self.omitLeadingZero.set(1)
-        else:
-            self.omitLeadingZero.set(0)
-        if self.prefs['formatUnknownAtRules']:
-            self.formatUnknownAtRules.set(1)
-        else:
-            self.formatUnknownAtRules.set(0)
-        if self.prefs['linesAfterRules']:
-            self.linesAfterRules.set(1)
-        else:
-            self.linesAfterRules.set(0)
+            self.indent.setCurrentIndex(len(self.prefs['indent']))
+        self.indentLastBrace.setChecked(self.prefs['indentClosingBrace'])
+        self.keepEmptyRules.setChecked(self.prefs['keepEmptyRules'])
+        self.omitLastSemicolon.setChecked(self.prefs['omitLastSemicolon'])
+        self.omitLeadingZero.setChecked(self.prefs['omitLeadingZero'])
+        self.formatUnknownAtRules.setChecked(self.prefs['formatUnknownAtRules'])
+        self.linesAfterRules.setChecked(bool(self.prefs['linesAfterRules']))
 
-    def save_and_go(self, bk):
-        if self.indent.get() == '1 tab':
+    def save_and_go(self):
+        if self.indent.currentText() == '1 tab':
             self.prefs['indent'] = '\t'
         else:
-            self.prefs['indent'] = self.comboIndent.current() * ' '
-        self.prefs['indentClosingBrace'] = True \
-                if self.indentLastBrace.get() == 1 \
-                else False
-        self.prefs['keepEmptyRules'] = True \
-                if self.keepEmptyRules.get() == 1 \
-                else False
-        self.prefs['omitLastSemicolon'] = True \
-                if self.omitSemicolon.get() == 1 \
-                else False
-        self.prefs['omitLeadingZero'] = True \
-                if self.omitLeadingZero.get() == 1 \
-                else False
-        self.prefs['formatUnknownAtRules'] = True \
-                if self.formatUnknownAtRules.get() == 1 \
-                else False
-        self.prefs['linesAfterRules'] = 1 * '\n' \
-                if self.linesAfterRules.get() == 1 \
-                else 0 * '\n'
-        self.destroy()
+            self.prefs['indent'] = self.indent.currentIndex() * ' '
+        self.prefs['indentClosingBrace'] = self.indentLastBrace.isChecked()
+        self.prefs['keepEmptyRules'] = self.keepEmptyRules.isChecked()
+        self.prefs['omitLastSemicolon'] = self.omitLastSemicolon.isChecked()
+        self.prefs['omitLeadingZero'] = self.omitLeadingZero.isChecked()
+        self.prefs['formatUnknownAtRules'] = self.formatUnknownAtRules.isChecked()
+        self.prefs['linesAfterRules'] = '\n' if self.linesAfterRules.isChecked() else ''
+        self.accept()
 
 
-class InfoDialog(tk.Tk):
-    """
-    Dialog to show errors on css parsing and let the user decide if she
-    wants to continue or stop the plugin.
-    """
+class InfoDialog(QtWidgets.QWidget):
 
     stop_plugin = True
 
-    def __init__(self, bk, prefs):
+    def __init__(self, bk, prefs, css_to_skip=None, css_to_parse=None, css_warnings=None):
         super().__init__()
-        style = ttk.Style()
-        style.configure('myCheckbutton.TCheckbutton', padding="0 0 0 5")
-        self.title('Preparing to parse...')
-        self.resizable(width=tk.TRUE, height=tk.TRUE)
-        self.geometry('+100+100')
-        self.protocol('WM_DELETE_WINDOW', self.destroy)
-        try:
-            icon = tk.PhotoImage(file=os.path.join(SCRIPT_DIR, 'plugin.png'))
-            self.iconphoto(True, icon)
-        except Exception:
-            pass
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=1)
-        self.mainframe = ttk.Frame(self, padding="12 12 12 12")  # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky="nwes")
+        self.setWindowTitle('Preparing to parse...')
 
-        self.msg = tk.StringVar()
-        self.labelInfo = ttk.Label(self.mainframe,
-                                   textvariable=self.msg, wraplength=600)
-        self.labelInfo.grid(row=0, column=0, columnspan=4, sticky="we", pady=5)
+        self.labelInfo = QtWidgets.QLabel(
+            self.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
+        )
+        self.labelInfo.setWordWrap(True)
 
-        self.parseAllXMLFiles = tk.BooleanVar()
-        self.checkParseAllXMLFiles = ttk.Checkbutton(self.mainframe,
-                                                     text='Parse every xml file, not only xhtml.',
-                                                     variable=self.parseAllXMLFiles,
-                                                     onvalue=True,
-                                                     offvalue=False,
-                                                     style="myCheckbutton.TCheckbutton")
-        self.checkParseAllXMLFiles.grid(row=1, column=0, columnspan=4, sticky="we")
-        
-        pref_button = ttk.Button(self.mainframe, text='Set preferences',
-                                 command=lambda: self.prefs_dlg(bk, prefs))
-        pref_button.grid(row=2, column=0, sticky="we")
-        cont_button = ttk.Button(self.mainframe, text='Continue',
-                                 command=lambda: self.proceed(bk, prefs))
-        cont_button.grid(row=2, column=2, sticky="we")
-        canc_button = ttk.Button(self.mainframe, text='Cancel', command=self.quit)
-        canc_button.grid(row=2, column=3, sticky="we")
-        pref_button.bind('<Return>', lambda event: self.prefs_dlg(bk, prefs))
-        pref_button.bind('<KP_Enter>', lambda event: self.prefs_dlg(bk, prefs))
-        cont_button.bind('<Return>', lambda event: self.proceed(bk, prefs))
-        cont_button.bind('<KP_Enter>', lambda event: self.proceed(bk, prefs))
-        canc_button.bind('<Return>', lambda event: self.quit())
-        canc_button.bind('<KP_Enter>', lambda event: self.quit())
+        self.checkParseAllXMLFiles = QtWidgets.QCheckBox(
+            'Parse every xml file, not only xhtml.'
+        )
 
-        self.mainframe.columnconfigure(0, weight=0)
-        self.mainframe.columnconfigure(1, weight=1)
-        self.mainframe.columnconfigure(2, weight=0)
-        self.mainframe.columnconfigure(3, weight=0)
-        cont_button.focus_set()
+        buttonBox = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok|QtWidgets.QDialogButtonBox.Cancel
+        )
+        # ResetRole is mostly for cross-platform positioning:
+        # there isn't a standard role exactly adequate for this button,
+        # and the connected slot is entirely custom anyway
+        pref_button = buttonBox.addButton(
+            "Set preferences",
+            QtWidgets.QDialogButtonBox.ResetRole
+        )
+        pref_button.clicked.connect(lambda: self.prefs_dlg(bk, prefs))
+        buttonBox.accepted.connect(lambda: self.proceed(bk, prefs))
+        buttonBox.rejected.connect(self.close)
 
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.setContentsMargins(12, 12, 12, 12)
+        mainLayout.setSpacing(5)
+        mainLayout.addWidget(self.labelInfo)
+        mainLayout.addWidget(self.checkParseAllXMLFiles)
+        mainLayout.addWidget(buttonBox)
+
+        self.setLayout(mainLayout)
         self.get_initial_values(prefs)
+        self.show()
 
     def parse_errors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
         par_msg = ""
@@ -273,29 +195,24 @@ class InfoDialog(tk.Tk):
             par_msg += "Analysis will be done on {}".format(files_to_parse)
         if not par_msg:
             par_msg = "No css found."
-        self.msg.set(par_msg)
+        return par_msg
 
     def prefs_dlg(self, bk, prefs):
-        PrefsDialog(self, bk, prefs)
+        dlg = PrefsDialog(self, bk, prefs)
+        dlg.exec()
 
     def get_initial_values(self, prefs):
-        if prefs['parseAllXMLFiles']:
-            self.parseAllXMLFiles.set(1)
-        else:
-            self.parseAllXMLFiles.set(0)
+        self.checkParseAllXMLFiles.setChecked(prefs['parseAllXMLFiles'])
 
     def proceed(self, bk, prefs):
-        if self.parseAllXMLFiles.get() == 1:
-            prefs['parseAllXMLFiles'] = True
-        else:
-            prefs['parseAllXMLFiles'] = False
+        prefs['parseAllXMLFiles'] = self.checkParseAllXMLFiles.isChecked()
         set_css_output_prefs(bk, prefs)
         bk.savePrefs(prefs)
         InfoDialog.stop_plugin = False
-        self.destroy()
+        self.close()
 
 
-class SelectorsDialog(tk.Tk):
+class SelectorsDialog(QtWidgets.QWidget):
     """
     Dialog to show the list of css "orphaned" selectors (those without
     corresponding tags in xhtml files) and let the user choose the ones
@@ -307,142 +224,101 @@ class SelectorsDialog(tk.Tk):
 
     def __init__(self, bk, orphaned_selectors=None):
         super().__init__()
-        style = ttk.Style()
-        style.configure('TCheckbutton', background='white', wraplength=290)
-        self.title('Remove unused Selectors')
-        self.resizable(width=tk.TRUE, height=tk.TRUE)
-        self.protocol('WM_DELETE_WINDOW', self.destroy)
-        try:
-            icon = tk.PhotoImage(file=os.path.join(SCRIPT_DIR, 'plugin.png'))
-            self.iconphoto(True, icon)
-        except Exception:
-            pass
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=1)
-        self.mainframe = ttk.Frame(self, padding="12 12 12 12") # padding values's order: "W N E S"
-        self.mainframe.grid(column=0, row=0, sticky="nsew")
-        self.mainframe.bind('<Configure>',
-                            lambda event: self.update_wraplength(event, style))
-        self.upperframe = ttk.Frame(self.mainframe, padding="0", relief=tk.SUNKEN, borderwidth=1)
-        self.upperframe.grid(column=0, row=0, sticky="nsew")
-        self.lowerframe = ttk.Frame(self.mainframe, padding="0 8 0 0")
-        self.lowerframe.grid(column=0, row=1, sticky="nsew")
+        self.setWindowTitle("Remove unused Selectors")
+        self.setMinimumWidth(360)
+
+        scrollArea = QtWidgets.QScrollArea();
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setWidgetResizable(True)
+        frame = QtWidgets.QWidget()
+        frameLayout = QtWidgets.QVBoxLayout()
+        frame.setLayout(frameLayout)
+        scrollArea.setWidget(frame)
 
         if orphaned_selectors:
-            self.geometry('360x420+100+100')
-            self.scrollList = ttk.Scrollbar(self.upperframe, orient=tk.VERTICAL)
-            self.text = tk.Text(self.upperframe, yscrollcommand=self.scrollList.set,
-                             borderwidth=0, pady=0) # width=40, height=20,
-            self.scrollList.grid(row=0, column=3, sticky="nsew")
-            self.scrollList['command'] = self.text.yview
-            self.text.grid(row=0, column=0, columnspan=3, sticky="nsew")
-            self.bind_to_mousewheel(self.text)
-
             orphaned = SelectorsDialog.orphaned_dict
 
-            self.toggleAll = tk.BooleanVar()
-            self.toggleAllStr = tk.StringVar()
-            self.toggleAllStr.set('Unselect all')
-            self.checkToggleAll = ttk.Checkbutton(self.text,
-                                                  textvariable=self.toggleAllStr,
-                                                  variable=self.toggleAll,
-                                                  onvalue=True, offvalue=False,
-                                                  command=self.toggle_all,
-                                                  cursor="arrow")
-            self.add_bindtag(self.checkToggleAll, self.text)
-            self.text.window_create('end', window=self.checkToggleAll)
-            self.text.insert('end', '\n\n')
-            self.toggleAll.set(True)
-
             self.toggle_selectors_list = []
+            self.toggleAll = QtWidgets.QCheckBox('Unselect all')
+            self.toggleAll.setChecked(True)
+            try:
+                self.toggleAll.checkStateChanged.connect(self.toggle_all)  # PySide6
+            except AttributeError:
+                self.toggleAll.stateChanged.connect(self.toggle_all)  # PyQt5
+            frameLayout.addWidget(self.toggleAll)
+            frameLayout.addSpacing(self.toggleAll.sizeHint().height())
+
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
                 sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
-                orphaned[selector_key] = [selector_tuple, tk.BooleanVar()]
-                sel_checkbutton = ttk.Checkbutton(self.text,
-                                                  text=sel_and_css,
-                                                  variable=orphaned[selector_key][1],
-                                                  onvalue=True, offvalue=False,
-                                                  cursor="arrow")
-                self.add_bindtag(sel_checkbutton, self.text)
-                self.text.window_create('end', window=sel_checkbutton)
-                self.text.insert('end', '\n')
-                orphaned[selector_key][1].set(True)
-                self.toggle_selectors_list.append(orphaned[selector_key][1])
-            self.text.config(state=tk.DISABLED)
+                checkbox = WrappingCheckBox(sel_and_css)
+                checkbox.setChecked(True)
+                orphaned[selector_key] = [selector_tuple, checkbox]
+                self.toggle_selectors_list.append(checkbox)
+                frameLayout.addWidget(checkbox)
         else:
-            self.geometry('+100+100')
-            self.labelInfo = ttk.Label(self.upperframe,
-                                       text="I didn't find any unused selector.")
-            self.labelInfo.grid(row=0, column=0, sticky="we", pady=5)
+            labelInfo = QtWidgets.QLabel("I didn't find any unused selector.")
+            frameLayout.addWidget(labelInfo)
 
-        cont_button = ttk.Button(self.lowerframe,
-                                 text='Continue',
-                                 command=self.proceed)
-        cont_button.grid(row=0, column=1, sticky="we")
-        canc_button = ttk.Button(self.lowerframe,
-                                 text='Cancel',
-                                 command=self.quit)
-        canc_button.grid(row=0, column=2, sticky="we")
-        cont_button.bind('<Return>', lambda event: self.proceed())
-        cont_button.bind('<KP_Enter>', lambda event: self.proceed())
-        canc_button.bind('<Return>', lambda event: self.quit())
-        canc_button.bind('<KP_Enter>', lambda event: self.quit())
+        buttonBox = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok|QtWidgets.QDialogButtonBox.Cancel
+        )
+        buttonBox.accepted.connect(self.proceed)
+        buttonBox.rejected.connect(self.close)
 
-        self.mainframe.columnconfigure(0, weight=1)
-        self.mainframe.rowconfigure(0, weight=1)
-        self.upperframe.columnconfigure(0, weight=1)
-        self.upperframe.rowconfigure(0, weight=1)
-        self.lowerframe.columnconfigure(0, weight=1)
-        self.lowerframe.rowconfigure(0, weight=0)
-        cont_button.focus_set()
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addWidget(scrollArea)
+        mainLayout.addWidget(buttonBox)
+
+        self.setLayout(mainLayout)
+        self.show()
 
     def proceed(self):
+        for k in SelectorsDialog.orphaned_dict:
+            SelectorsDialog.orphaned_dict[k][1] = SelectorsDialog.orphaned_dict[k][1].isChecked()
         SelectorsDialog.stop_plugin = False
-        self.destroy()
+        self.close()
 
     def toggle_all(self):
-        if self.toggleAll.get() == 1:
-            self.toggleAllStr.set('Unselect all')
-            for toggle_var in self.toggle_selectors_list:
-                toggle_var.set(1)
+        if self.toggleAll.isChecked():
+            self.toggleAll.setText('Unselect all')
+            for checkbox in self.toggle_selectors_list:
+                checkbox.setChecked(True)
         else:
-            self.toggleAllStr.set('Select all')
-            for toggle_var in self.toggle_selectors_list:
-                toggle_var.set(0)
-
-    def update_wraplength(self, event, style):
-        style.configure('TCheckbutton',
-                        wraplength=event.width-(50+self.scrollList.winfo_reqwidth()))
-
-    def add_bindtag(self, widget, other):
-        bindtags = list(widget.bindtags())
-        bindtags.insert(1, str(other))  # self.winfo_pathname(other.winfo_id()))
-        widget.bindtags(tuple(bindtags))
-
-    def bind_to_mousewheel(self, widget):
-        if sys.platform.startswith("linux"):
-            widget.bind("<4>", lambda event: self.scroll_on_mousewheel(event, widget))
-            widget.bind("<5>", lambda event: self.scroll_on_mousewheel(event, widget))
-        else:
-            widget.bind("<MouseWheel>", lambda event: self.scroll_on_mousewheel(event, widget))
-
-    def scroll_on_mousewheel(self, event, widget):
-        if event.num == 5 or event.delta < 0:
-            move = 1
-        else:
-            move = -1
-        widget.yview_scroll(move, tk.UNITS)
+            self.toggleAll.setText('Select all')
+            for checkbox in self.toggle_selectors_list:
+                checkbox.setChecked(False)
 
 
-class ErrorDlg(tk.Tk):
+class ErrorDlg(QtWidgets.QWidget):
 
     def __init__(self, filename):
         super().__init__()
-        self.withdraw()
-        msgbox.showerror('Error while parsing {}'.format(filename), sys.exc_info()[1])
-        self.destroy()
+        self.setWindowTitle('Error while parsing {}'.format(filename))
+
+        icon = QtWidgets.QLabel()
+        icon.setPixmap(
+            self.style()
+                .standardIcon(QtWidgets.QStyle.SP_MessageBoxCritical)
+                .pixmap(QtCore.QSize(32, 32))
+        )
+        msg = QtWidgets.QLabel(f'Type: {sys.exc_info()[0]}\nMessage: {sys.exc_info()[1]}')
+        msg.setMinimumWidth(300)
+        msg.setWordWrap(True)
+        msgLayout = QtWidgets.QHBoxLayout()
+        msgLayout.addWidget(icon)
+        msgLayout.addWidget(msg)
+        msgLayout.setSpacing(20)
+
+        buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
+        buttonBox.accepted.connect(self.close)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addLayout(msgLayout)
+        layout.addWidget(buttonBox)
+        self.setLayout(layout)
+        self.show()
 
 
 # Sigil 0.9.7 broke compatibility in reading css and js files.
@@ -644,15 +520,15 @@ def run(bk):
     # set custom serializer if Sigil version is < 0.9.18 (0.9.18 and higher have the new css-parser module)
     if bk.launcher_version() < 20190826:
         cssutils.setSerializer(customcssutils.MyCSSSerializer())
+    app = PluginApplication([], bk, app_icon=PLUGIN_ICON)
     prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
     css_to_skip, css_to_parse, css_warnings = pre_parse_css(bk, css_parser)
 
     if not prefs['quiet'] or css_to_skip:
-        form = InfoDialog(bk, prefs)
-        form.parse_errors(bk, css_to_skip, css_to_parse, css_warnings)
-        form.mainloop()
+        dlg = InfoDialog(bk, prefs, css_to_skip, css_to_parse, css_warnings)
+        app.exit(app.exec())
         if InfoDialog.stop_plugin:
             return -1
     else:
@@ -673,10 +549,10 @@ def run(bk):
             'html': etree.HTML(bk.readfile(file_id).encode('utf-8'))
         }
         try:
-            parsed_markup[file_id]['xml']: etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
+            parsed_markup[file_id]['xml'] = etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
         except etree.XMLSyntaxError:
-            form = ErrorDlg(href_to_basename(href))
-            form.mainloop()
+            dlg = ErrorDlg(href_to_basename(href))
+            app.exit(app.exec())
             return 1
 
     # Parse files to create the list of "orphaned selectors"
@@ -703,19 +579,23 @@ def run(bk):
                         if selector_exists(etrees['html'], selector_ns, namespaces_dict, etrees['is_xhtml']):
                             maintain_selector = True
                             break
-                        if etrees.get('xml') and selector_exists(etrees['xml'], selector_ns, namespaces_dict, etrees['is_xhtml']):
+                        if etrees.get('xml') is not None and selector_exists(etrees['xml'], selector_ns, namespaces_dict, etrees['is_xhtml']):
                             maintain_selector = True
                             break
                     if not maintain_selector:
-                        orphaned_selectors.append((css_id, rule,
-                                                   rule.selectorList[selector_index],
-                                                   selector_index,
-                                                   parsed_css))
+                        orphaned_selectors.append(
+                            (
+                                css_id, rule,
+                                rule.selectorList[selector_index],
+                                selector_index,
+                                parsed_css
+                            )
+                        )
 
     # Show the list of selectors to the user.
     if not prefs['quiet']:
-        form = SelectorsDialog(bk, orphaned_selectors)
-        form.mainloop()
+        dlg = SelectorsDialog(bk, orphaned_selectors)
+        app.exit(app.exec())
         if SelectorsDialog.stop_plugin:
             return -1
     else:
@@ -726,7 +606,7 @@ def run(bk):
     css_to_change = {}
     old_rule, counter = None, 0
     for sel_data, to_delete in SelectorsDialog.orphaned_dict.values():
-        if to_delete is True or to_delete.get() == 1:
+        if to_delete:
             if sel_data[1] == old_rule:
                 counter += 1
             else:
