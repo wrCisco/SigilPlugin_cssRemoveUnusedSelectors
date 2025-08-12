@@ -99,9 +99,11 @@ class WrappingCheckBox(QtWidgets.QWidget):
         w_start = 0
         for i, c in enumerate(text):
             if c in separators:
-                words.append(text[w_start:i])
-                w_start = i
-        if w_start != i:
+                if w_start != i:
+                    words.append(text[w_start:i])
+                words.append(c)
+                w_start = i + 1
+        if w_start < i:
             words.append(text[w_start:])
         fontMetrics = QtGui.QFontMetricsF(self.label.font())
         for i, w in enumerate(words):
