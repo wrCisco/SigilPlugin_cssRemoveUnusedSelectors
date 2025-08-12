@@ -1,60 +1,35 @@
-from plugin_utils import QtWidgets, Qt, QtCore
+from plugin_utils import QtWidgets, Qt, QtCore, QtGui
 
 
 class WrappingCheckBox(QtWidgets.QWidget):
-    def __init__(self, text="", parent=None):
+
+    def __init__(self, text="", margins=(0,0,0,0), spacing=12,
+                fillBackground=True, parent=None):
         super().__init__(parent)
         
         self.layout = QtWidgets.QHBoxLayout(self)
-        self.layout.setContentsMargins(0, 2, 0, 2)
-        self.layout.setSpacing(5)
+        self.layout.setContentsMargins(*margins)
+        self.layout.setSpacing(spacing)
+
+        self.setAutoFillBackground(bool(fillBackground))
+
+        self.checkbox = CheckBoxHighlighter(self)
         
-        self.checkbox = QtWidgets.QCheckBox()
-        
-        self.label = QtWidgets.QLabel(text)
+        self.label = QtWidgets.QLabel()
         self.label.setWordWrap(True)
+        self.labelText = text  # will be set as label's text in the showEvent method
         
         # Make label clickable to toggle checkbox
         self.label.mousePressEvent = self._on_label_click
         
         self.layout.addWidget(self.checkbox)
-        self.layout.addWidget(self.label, 1)  # Label takes remaining space
-        self.layout.setAlignment(self.checkbox, Qt.AlignCenter)
-        self.layout.setAlignment(self.label, Qt.AlignLeft|Qt.AlignVCenter)
-    
-    def resizeEvent(self, event):
-        """Handle resize events to update text wrapping"""
-        super().resizeEvent(event)
-        self._updateLabelWidth()
-
-    def showEvent(self, event):
-        """Handle show events to ensure proper initial sizing"""
-        super().showEvent(event)
-        self._updateLabelWidth()
-
-    def _updateLabelWidth(self):
-        """Calculate and set the appropriate width for the label"""
-        if self.width() <= 1:  # Skip if not properly sized yet
-            return
-        # Calculate available width for the label
-        margins = self.layout.contentsMargins()
-        spacing = self.layout.spacing()
-        available_width = (
-            self.width() - self.checkbox.width() - spacing -
-            margins.left() - margins.right()
-        )
-        available_width = max(available_width, 50)  # Ensure minimum width
-        # I'm not sure why if I use exactly available_width
-        # as argument for setFixedWidth, the label grows but
-        # does not shrink as needed.
-        self.label.setFixedWidth(available_width - 1)
-        self.label.updateGeometry()
-        self.updateGeometry()
+        self.layout.addWidget(self.label, stretch=1)
 
     def _on_label_click(self, event):
         """Handle label click to toggle checkbox"""
         self.checkbox.toggle()
-    
+        self.checkbox.setFocus()
+
     def setText(self, text):
         """Set the text displayed in the label"""
         self.label.setText(text)
@@ -96,3 +71,76 @@ class WrappingCheckBox(QtWidgets.QWidget):
     def toggled(self):
         """Access to the checkbox's toggled signal"""
         return self.checkbox.toggled
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.label.setText(
+            self.break_long_words(self.labelText, self.width() - 20)
+        )
+        # self.label.updateGeometry()
+        # self.updateGeometry()
+
+    def break_long_words(self, text, availableWidth):
+        """Intersperse zero-width white spaces between the characters
+        of words longer than the available width."""
+        margins = self.layout.contentsMargins()
+        spacing = self.layout.spacing()
+        if self.checkbox.isVisible():
+            checkboxWidth = self.checkbox.width()
+        else:
+            checkboxWidth = self.checkbox.sizeHint().width()
+        minWidthToBreakWord = availableWidth \
+            - checkboxWidth \
+            - spacing \
+            - margins.left() \
+            - margins.right()
+        separators = ' -'  # just the most common ones
+        words = []
+        w_start = 0
+        for i, c in enumerate(text):
+            if c in separators:
+                words.append(text[w_start:i])
+                w_start = i
+        if w_start != i:
+            words.append(text[w_start:])
+        fontMetrics = QtGui.QFontMetricsF(self.label.font())
+        for i, w in enumerate(words):
+            if fontMetrics.horizontalAdvance(w) > minWidthToBreakWord:
+                words[i] = '\u200B'.join(w)
+        return ''.join(words)
+
+
+class CheckBoxHighlighter(QtWidgets.QCheckBox):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def focusInEvent(self, event):
+        """Handle checkbox focus in from keyboard to highlight the parent widget"""
+        super().focusInEvent(event)
+        if event.reason() not in (Qt.TabFocusReason, Qt.BacktabFocusReason):
+            return
+        if self.parent() and self.parent().autoFillBackground():
+            palette = self.parent().palette()
+            self.oldBgColor = palette.color(self.parent().backgroundRole())
+            highlightColor = palette.color(QtGui.QPalette.Highlight)
+            palette.setColor(self.parent().backgroundRole(), highlightColor)
+            self.parent().setPalette(palette)
+
+            palette = self.parent().label.palette()
+            self.oldTextColor = palette.color(self.parent().label.foregroundRole())
+            highlightedTextColor = palette.color(QtGui.QPalette.HighlightedText)
+            palette.setColor(self.parent().label.foregroundRole(), highlightedTextColor)
+            self.parent().label.setPalette(palette)
+
+    def focusOutEvent(self, event):
+        """Handle checkbox focus out from keyboard to highlight the parent widget"""
+        super().focusOutEvent(event)
+        if hasattr(self, 'oldBgColor'):
+            palette = self.parent().palette()
+            palette.setColor(self.parent().backgroundRole(), self.oldBgColor)
+            self.parent().setPalette(palette)
+        if hasattr(self, 'oldTextColor'):
+            palette = self.parent().label.palette()
+            palette.setColor(self.parent().label.foregroundRole(), self.oldTextColor)
+            self.parent().label.setPalette(palette)

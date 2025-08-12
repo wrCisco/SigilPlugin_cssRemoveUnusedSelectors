@@ -24,7 +24,6 @@ import sys
 import os
 import regex as re
 
-from plugin_utils import PluginApplication, QtWidgets, QtCore, Qt
 from cssselect.xpath import SelectorError
 from lxml import etree, cssselect
 try:
@@ -32,6 +31,9 @@ try:
 except ImportError:
     import cssutils
 
+from plugin_utils import (
+    PluginApplication, QtWidgets, QtCore, Qt, QtGui,
+)
 import customcssutils
 from wrappingcheckbox import WrappingCheckBox
 
@@ -218,7 +220,7 @@ class SelectorsDialog(QtWidgets.QWidget):
     corresponding tags in xhtml files) and let the user choose the ones
     to delete.
     """
-    
+
     orphaned_dict = OrderedDict()
     stop_plugin = True
 
@@ -227,33 +229,52 @@ class SelectorsDialog(QtWidgets.QWidget):
         self.setWindowTitle("Remove unused Selectors")
         self.setMinimumWidth(360)
 
-        scrollArea = QtWidgets.QScrollArea();
+        mainLayout = QtWidgets.QVBoxLayout(self)
+
+        scrollArea = QtWidgets.QScrollArea()
         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scrollArea.setWidgetResizable(True)
-        frame = QtWidgets.QWidget()
         frameLayout = QtWidgets.QVBoxLayout()
+        frameLayout.setSpacing(0)
+        frameLayout.setContentsMargins(0, 0, 0, 0)
+        frame = QtWidgets.QWidget()
         frame.setLayout(frameLayout)
         scrollArea.setWidget(frame)
 
         if orphaned_selectors:
             orphaned = SelectorsDialog.orphaned_dict
 
-            self.toggle_selectors_list = []
-            self.toggleAll = QtWidgets.QCheckBox('Unselect all')
-            self.toggleAll.setChecked(True)
-            try:
-                self.toggleAll.checkStateChanged.connect(self.toggle_all)  # PySide6
-            except AttributeError:
-                self.toggleAll.stateChanged.connect(self.toggle_all)  # PyQt5
-            frameLayout.addWidget(self.toggleAll)
-            frameLayout.addSpacing(self.toggleAll.sizeHint().height())
+            labelInfo = QtWidgets.QLabel('Choose the selectors you want to delete')
+            labelInfo.setWordWrap(True)
+            mainLayout.addWidget(labelInfo)
 
+            self.toggle_selectors_list = []
+            self.toggleAll = WrappingCheckBox(
+                'Select / Unselect all', margins=(8, 12, 8, 12), fillBackground=True
+            )
+            self.toggleAll.setChecked(True)
+            self.toggleAll.stateChanged().connect(self.toggle_all)
+            frameLayout.addWidget(self.toggleAll)
+
+            separator = QtWidgets.QFrame()
+            separator.setFrameShape(QtWidgets.QFrame.HLine)
+            separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+            frameLayout.addWidget(separator)
+
+            alternateBgColor = self.toggleAll.palette().color(QtGui.QPalette.AlternateBase)
+            checkbox_margins = (8, 6, 8, 6)
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
-                sel_and_css = '{} ({})'.format(selector_tuple[2].selectorText, css_filename)
+                sel_and_css = f'{selector_tuple[2].selectorText} ({css_filename})'
                 selector_key = selector_tuple[2].selectorText+"_"+str(index)
-                checkbox = WrappingCheckBox(sel_and_css)
+                checkbox = WrappingCheckBox(
+                    sel_and_css, margins=checkbox_margins, fillBackground=True
+                )
                 checkbox.setChecked(True)
+                if index % 2 == 0:
+                    palette = checkbox.palette()
+                    palette.setColor(checkbox.backgroundRole(), alternateBgColor)
+                    checkbox.setPalette(palette)
                 orphaned[selector_key] = [selector_tuple, checkbox]
                 self.toggle_selectors_list.append(checkbox)
                 frameLayout.addWidget(checkbox)
@@ -267,11 +288,9 @@ class SelectorsDialog(QtWidgets.QWidget):
         buttonBox.accepted.connect(self.proceed)
         buttonBox.rejected.connect(self.close)
 
-        mainLayout = QtWidgets.QVBoxLayout()
         mainLayout.addWidget(scrollArea)
         mainLayout.addWidget(buttonBox)
 
-        self.setLayout(mainLayout)
         self.show()
 
     def proceed(self):
@@ -281,14 +300,9 @@ class SelectorsDialog(QtWidgets.QWidget):
         self.close()
 
     def toggle_all(self):
-        if self.toggleAll.isChecked():
-            self.toggleAll.setText('Unselect all')
-            for checkbox in self.toggle_selectors_list:
-                checkbox.setChecked(True)
-        else:
-            self.toggleAll.setText('Select all')
-            for checkbox in self.toggle_selectors_list:
-                checkbox.setChecked(False)
+        checked = self.toggleAll.isChecked()
+        for checkbox in self.toggle_selectors_list:
+            checkbox.setChecked(checked)
 
 
 class ErrorDlg(QtWidgets.QWidget):
@@ -528,7 +542,7 @@ def run(bk):
 
     if not prefs['quiet'] or css_to_skip:
         dlg = InfoDialog(bk, prefs, css_to_skip, css_to_parse, css_warnings)
-        app.exit(app.exec())
+        app.exec()
         if InfoDialog.stop_plugin:
             return -1
     else:
@@ -552,7 +566,7 @@ def run(bk):
             parsed_markup[file_id]['xml'] = etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
         except etree.XMLSyntaxError:
             dlg = ErrorDlg(href_to_basename(href))
-            app.exit(app.exec())
+            app.exec()
             return 1
 
     # Parse files to create the list of "orphaned selectors"
@@ -595,7 +609,7 @@ def run(bk):
     # Show the list of selectors to the user.
     if not prefs['quiet']:
         dlg = SelectorsDialog(bk, orphaned_selectors)
-        app.exit(app.exec())
+        app.exec()
         if SelectorsDialog.stop_plugin:
             return -1
     else:
