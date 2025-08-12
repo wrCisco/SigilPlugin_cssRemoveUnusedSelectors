@@ -94,7 +94,7 @@ class WrappingCheckBox(QtWidgets.QWidget):
             - spacing \
             - margins.left() \
             - margins.right()
-        separators = ' -'  # just the most common ones
+        separators = ' -\u200B'  # just the most common ones
         words = []
         w_start = 0
         for i, c in enumerate(text):
