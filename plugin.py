@@ -32,7 +32,7 @@ except ImportError:
     import cssutils
 
 from plugin_utils import (
-    PluginApplication, QtWidgets, QtCore, Qt, QtGui,
+    PluginApplication, QtWidgets, QtCore, Qt, QtGui, iswindows
 )
 import customcssutils
 from wrappingcheckbox import WrappingCheckBox
@@ -250,7 +250,7 @@ class SelectorsDialog(QtWidgets.QWidget):
 
             self.toggle_selectors_list = []
             self.toggleAll = WrappingCheckBox(
-                'Select / Unselect all', margins=(8, 12, 8, 12), fillBackground=True
+                'Select / Unselect all', margins=(8, 8, 8, 8), fillBackground=True
             )
             self.toggleAll.setChecked(True)
             self.toggleAll.stateChanged().connect(self.toggle_all)
@@ -261,7 +261,10 @@ class SelectorsDialog(QtWidgets.QWidget):
             separator.setFrameShadow(QtWidgets.QFrame.Sunken)
             frameLayout.addWidget(separator)
 
+            bgColor = self.toggleAll.palette().color(self.toggleAll.backgroundRole())
             alternateBgColor = self.toggleAll.palette().color(QtGui.QPalette.AlternateBase)
+            if bgColor.getRgb() == alternateBgColor.getRgb():
+                alternateBgColor = self.toggleAll.palette().color(QtGui.QPalette.Base)
             checkbox_margins = (8, 6, 8, 6)
             for index, selector_tuple in enumerate(orphaned_selectors):
                 css_filename = href_to_basename(bk.id_to_href(selector_tuple[0]))
@@ -534,7 +537,7 @@ def run(bk):
     # set custom serializer if Sigil version is < 0.9.18 (0.9.18 and higher have the new css-parser module)
     if bk.launcher_version() < 20190826:
         cssutils.setSerializer(customcssutils.MyCSSSerializer())
-    app = PluginApplication([], bk, app_icon=PLUGIN_ICON)
+    app = PluginApplication([], bk, app_icon=PLUGIN_ICON, match_dark_palette=iswindows)
     prefs = get_prefs(bk)
     xml_parser = etree.XMLParser(resolve_entities=False)
     css_parser = cssutils.CSSParser(raiseExceptions=True, validate=False)
