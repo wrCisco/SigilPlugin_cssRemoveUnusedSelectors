@@ -673,7 +673,7 @@ def run(bk):
             'html': etree.HTML(bk.readfile(file_id).encode('utf-8'))
         }
         try:
-            parsed_markup[file_id]['xml']: etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
+            parsed_markup[file_id]['xml'] = etree.XML(bk.readfile(file_id).encode('utf-8'), xml_parser)
         except etree.XMLSyntaxError:
             form = ErrorDlg(href_to_basename(href))
             form.mainloop()
@@ -703,7 +703,7 @@ def run(bk):
                         if selector_exists(etrees['html'], selector_ns, namespaces_dict, etrees['is_xhtml']):
                             maintain_selector = True
                             break
-                        if etrees.get('xml') and selector_exists(etrees['xml'], selector_ns, namespaces_dict, etrees['is_xhtml']):
+                        if etrees.get('xml') is not None and selector_exists(etrees['xml'], selector_ns, namespaces_dict, etrees['is_xhtml']):
                             maintain_selector = True
                             break
                     if not maintain_selector:
