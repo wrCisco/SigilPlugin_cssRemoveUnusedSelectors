@@ -168,6 +168,9 @@ class InfoDialog(QtWidgets.QWidget):
         pref_button.clicked.connect(lambda: self.prefs_dlg(bk, prefs))
         buttonBox.accepted.connect(lambda: self.proceed(bk, prefs))
         buttonBox.rejected.connect(self.close)
+        buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setAutoDefault(True)
+        buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).setAutoDefault(True)
+        pref_button.setAutoDefault(True)
 
         mainLayout = QtWidgets.QVBoxLayout()
         mainLayout.setContentsMargins(12, 12, 12, 12)
@@ -179,6 +182,7 @@ class InfoDialog(QtWidgets.QWidget):
         self.setLayout(mainLayout)
         self.get_initial_values(prefs)
         self.show()
+        buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setFocus()
 
     def parse_errors(self, bk, css_to_skip=None, css_to_parse=None, css_warnings=None):
         par_msg = ""
@@ -240,6 +244,7 @@ class SelectorsDialog(QtWidgets.QWidget):
         frame = QtWidgets.QWidget()
         frame.setLayout(frameLayout)
         scrollArea.setWidget(frame)
+        scrollArea.setFocusPolicy(Qt.NoFocus)
 
         if orphaned_selectors:
             orphaned = SelectorsDialog.orphaned_dict
@@ -292,11 +297,14 @@ class SelectorsDialog(QtWidgets.QWidget):
         )
         buttonBox.accepted.connect(self.proceed)
         buttonBox.rejected.connect(self.close)
+        buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setAutoDefault(True)
+        buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).setAutoDefault(True)
 
         mainLayout.addWidget(scrollArea)
         mainLayout.addWidget(buttonBox)
 
         self.show()
+        buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setFocus()
 
     def proceed(self):
         for k in SelectorsDialog.orphaned_dict:
