@@ -201,7 +201,7 @@ class InfoDialog(QtWidgets.QWidget):
 
     def prefs_dlg(self, bk, prefs):
         dlg = PrefsDialog(self, bk, prefs)
-        dlg.exec()
+        dlg.open()
 
     def get_initial_values(self, prefs):
         self.checkParseAllXMLFiles.setChecked(prefs['parseAllXMLFiles'])
@@ -283,7 +283,9 @@ class SelectorsDialog(QtWidgets.QWidget):
                 frameLayout.addWidget(checkbox)
         else:
             labelInfo = QtWidgets.QLabel("I didn't find any unused selector.")
+            labelInfo.setContentsMargins(16, 12, 16, 12)
             frameLayout.addWidget(labelInfo)
+        frameLayout.addStretch()
 
         buttonBox = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok|QtWidgets.QDialogButtonBox.Cancel
