@@ -557,7 +557,7 @@ def run(bk):
         dlg = InfoDialog(bk, prefs, css_to_skip, css_to_parse, css_warnings)
         app.exec()
         if InfoDialog.stop_plugin:
-            return -1
+            return 0
     else:
         set_css_output_prefs(bk, prefs)
 
@@ -624,7 +624,7 @@ def run(bk):
         dlg = SelectorsDialog(bk, orphaned_selectors)
         app.exec()
         if SelectorsDialog.stop_plugin:
-            return -1
+            return 0
     else:
         for i, selector in enumerate(orphaned_selectors):
             SelectorsDialog.orphaned_dict[i] = [selector, True]
