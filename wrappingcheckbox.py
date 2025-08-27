@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import numbers
+from functools import reduce
 
 from plugin_utils import QtWidgets, Qt, QtCore, QtGui
 
@@ -22,34 +22,24 @@ from plugin_utils import QtWidgets, Qt, QtCore, QtGui
 class WrappingCheckBox(QtWidgets.QWidget):
 
     def __init__(self, text="", margins=(0,0,0,0), spacing=12,
-                fillBackground=True, minWidthToBreakWords=None, parent=None):
+                fillBackground=True, parent=None):
         super().__init__(parent)
         
-        self.layout = QtWidgets.QHBoxLayout(self)
-        self.layout.setContentsMargins(*margins)
-        self.layout.setSpacing(spacing)
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(*margins)
+        layout.setSpacing(spacing)
 
         self.setAutoFillBackground(bool(fillBackground))
 
         self.checkbox = CheckBoxHighlighter(self)
+        self.label = WrappingLabel(text)
         
-        self.label = QtWidgets.QLabel()
-        self.label.setWordWrap(True)
-        self.labelText = text  # will be set as label's text in the showEvent method
+        layout.addWidget(self.checkbox)
+        layout.addWidget(self.label, stretch=1)
 
-        if isinstance(minWidthToBreakWords, numbers.Real):
-            self.minWidthToBreakWords = minWidthToBreakWords
-        else:
-            self.minWidthToBreakWords = None
-        
-        # Make label clickable to toggle checkbox
-        self.label.mousePressEvent = self._on_label_click
-        
-        self.layout.addWidget(self.checkbox)
-        self.layout.addWidget(self.label, stretch=1)
-
-    def _on_label_click(self, event):
+    def mousePressEvent(self, event):
         """Handle label click to toggle checkbox"""
+        super().mousePressEvent(event)
         self.checkbox.toggle()
         self.checkbox.setFocus()
 
@@ -81,7 +71,7 @@ class WrappingCheckBox(QtWidgets.QWidget):
     
     def checkStateChanged(self):
         """Access to the checkbox's checkStateChanged signal"""
-        return self.checkbox.checkStateChanged
+        return self.stateChanged()
     
     def stateChanged(self):
         """Access to the checkbox's stateChanged signal (for older Qt compatibility)"""
@@ -94,48 +84,6 @@ class WrappingCheckBox(QtWidgets.QWidget):
     def toggled(self):
         """Access to the checkbox's toggled signal"""
         return self.checkbox.toggled
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        availableWidth = self.width() - 20
-        if self.minWidthToBreakWords and self.minWidthToBreakWords < availableWidth:
-            availableWidth = self.minWidthToBreakWords
-        self.label.setText(
-            self.break_long_words(self.labelText, availableWidth)
-        )
-        # self.label.updateGeometry()
-        # self.updateGeometry()
-
-    def break_long_words(self, text, availableWidth):
-        """Intersperse zero-width white spaces between the characters
-        of words longer than the available width."""
-        margins = self.layout.contentsMargins()
-        spacing = self.layout.spacing()
-        if self.checkbox.isVisible():
-            checkboxWidth = self.checkbox.width()
-        else:
-            checkboxWidth = self.checkbox.sizeHint().width()
-        minWidthToBreakWord = availableWidth \
-            - checkboxWidth \
-            - spacing \
-            - margins.left() \
-            - margins.right()
-        separators = ' -\u200B'  # just the most common ones
-        words = []
-        w_start = 0
-        for i, c in enumerate(text):
-            if c in separators:
-                if w_start != i:
-                    words.append(text[w_start:i])
-                words.append(c)
-                w_start = i + 1
-        if w_start <= i:
-            words.append(text[w_start:])
-        fontMetrics = QtGui.QFontMetricsF(self.label.font())
-        for i, w in enumerate(words):
-            if fontMetrics.horizontalAdvance(w) > minWidthToBreakWord:
-                words[i] = '\u200B'.join(w)
-        return ''.join(words)
 
 
 class CheckBoxHighlighter(QtWidgets.QCheckBox):
@@ -172,3 +120,120 @@ class CheckBoxHighlighter(QtWidgets.QCheckBox):
             palette = self.parent().label.palette()
             palette.setColor(self.parent().label.foregroundRole(), self.oldTextColor)
             self.parent().label.setPalette(palette)
+
+
+class WrappingLabel(QtWidgets.QLabel):
+
+    def __init__(self, text='', parent=None):
+        super().__init__('', parent)
+        self.setWordWrap(True)
+        self.setMinimumWidth(10)
+        self._text = self._preprocess_text(text)
+        self._length_index = -1
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._reset_text()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._reset_text()
+
+    def setText(self, text):
+        self._text = self._preprocess_text(text)
+        self._length_index = -1
+        self._reset_text()
+
+    def setFont(self, font):
+        super().setFont(font)
+        self._text = self._preprocess_text(''.join(self._text['words']))
+        self._length_index = -1
+        self._reset_text()
+
+    def _update_length_index(self):
+        available_width = self.width() - 5
+        for i in range(len(self._text['sorted_lengths'])):
+            if self._text['sorted_lengths'][i] <= available_width <= self._text['sorted_lengths'][i + 1]:
+                self._length_index = i
+                break
+
+    def _reset_text(self):
+        new_text = self._compose_text(self.width() - 5)
+        if new_text:
+            super().setText(new_text)
+
+    def _compose_text(self, available_width):
+        lengths, i = self._text['sorted_lengths'], self._length_index
+        if i != -1 and lengths[i] <= available_width <= lengths[i + 1]:
+            return
+        self._update_length_index()
+        words = []
+        for i, word in enumerate(self._text['words']):
+            if available_width < self._text['lengths'][i]:
+                next_word = self._text['breakable_words'][i]
+            else:
+                next_word = word
+            words.append(next_word)
+        return ''.join(words)
+
+    def _preprocess_text(self, text):
+        words = tokenize_text(text, QtCore.QTextBoundaryFinder.BoundaryType.Line)
+        lengths = compute_words_length(words, self.font())
+        breakable_words = []
+        for word in words:
+            graphemes = tokenize_text(word, QtCore.QTextBoundaryFinder.BoundaryType.Grapheme)
+            breakable_words.append('\u200B'.join(graphemes))
+        sorted_lengths = [0, *sorted(list(set(lengths))), 999999]
+        return {
+            'words': words,
+            'breakable_words': breakable_words,
+            'lengths': lengths,
+            'sorted_lengths': sorted_lengths,
+        }
+
+
+def tokenize_text(text, boundary_type, boundary_reasons=None):
+    """
+    Divide text in a list of tokens based on boundary_type.
+    boundary_types: Grapheme, Word, Line or Sentence
+    """
+    if boundary_reasons is None:
+        try:
+            # BreakOpportunity doesn't come up while iterating over BoundaryReason flags
+            # (PySide 6.9), so I use it as the initializer of the reduce function
+            boundary_reasons = reduce(
+                lambda x, y: x | y,
+                QtCore.QTextBoundaryFinder.BoundaryReasons,
+                QtCore.QTextBoundaryFinder.BreakOpportunity
+            )
+        except TypeError:
+            # PyQt5 doesn't allow iterations over Qt enums
+            boundary_reasons = (
+                QtCore.QTextBoundaryFinder.StartOfItem
+                | QtCore.QTextBoundaryFinder.EndOfItem
+                | QtCore.QTextBoundaryFinder.MandatoryBreak
+                | QtCore.QTextBoundaryFinder.SoftHyphen
+                | QtCore.QTextBoundaryFinder.BreakOpportunity
+            )
+    tbf = QtCore.QTextBoundaryFinder(boundary_type, text)
+    tokens = []
+    pos = prev = tbf.position()
+    while True:
+        pos = tbf.toNextBoundary()
+        if pos == -1:
+            break
+        if pos != prev and boundary_reasons & tbf.boundaryReasons():
+            token = text[prev:pos]
+            tokens.append(text[prev:pos])
+            prev = pos
+    return tokens
+
+def compute_words_length(words, font):
+    """
+    Compute the width of every word in words using the QFont font.
+    """
+    fontMetrics = QtGui.QFontMetricsF(font)
+    lengths = []
+    for word in words:
+        lengths.append(fontMetrics.horizontalAdvance(word))
+    return lengths
